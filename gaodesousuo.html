@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图周边搜索A</title>
+    <style>
+        /* For Webkit browsers (Chrome, Safari, Edge) */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a9a9a9;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* For Firefox */
+        html {
+            scrollbar-width: auto; /* 'auto' or 'thin' */
+            scrollbar-color: #a9a9a9 #f1f1f1; /* thumb and track color */
+            overflow-y: scroll; /* 始终显示滚动条，防止页面内容变化时宽度抖动 */
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            min-height: 100vh; /* 确保body覆盖整个视口高度，防止底部白条 */
+            box-sizing: border-box; /* 将padding和border计入总高度/宽度 */
+            display: flex; /* 使用Flexbox布局 */
+            flex-direction: column; /* 垂直排列子元素 */
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            flex: 1; /* 让 container 填充剩余的垂直空间 */
+            display: flex; /* 同样使用Flexbox，以便内部元素可以更好地控制 */
+            flex-direction: column; /* 内部元素垂直排列 */
+            width: 100%; /* 配合 max-width 和 margin: auto 使用 */
+            box-sizing: border-box; /* 确保 padding 和 border 在计算内 */
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .search-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center; /* 仅中心对齐作为直接子元素的按钮 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* 添加立体阴影 */
+            transition: box-shadow 0.3s ease; /* 添加过渡效果 */
+        }
+        
+        .search-form:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.12); /* 悬浮时阴影更明显 */
+        }
+        
+        #locationStatus {
+            text-align: left; /* 确保地理编码成功后的状态信息是左对齐的 */
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left; /* 覆盖父级的居中对齐，确保标签和输入框左对齐 */
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        button {
+            background: #1890ff;
+            color: white;
+            padding: 12px 20px; /* 减小了左右内边距，使按钮变窄 */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #40a9ff;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            border-color: #096dd9;
+        }
+        
+        .results {
+            margin-top: 20px;
+            flex: 1; /* 填充剩余空间 */
+            overflow-y: auto; /* 如果内容溢出，则显示滚动条 */
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+        }
+        
+        .result-section h3 {
+            margin-top: 0;
+            color: #1890ff;
+        }
+        
+        .poi-item {
+            background: #fafafa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 添加立体阴影 */
+            transition: box-shadow 0.3s ease, transform 0.3s ease; /* 添加过渡效果 */
+        }
+        
+        .poi-item:hover {
+            transform: translateY(-2px); /* 悬浮时轻微上移 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬浮时阴影更明显 */
+        }
+        
+        .poi-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .poi-info {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .poi-info code {
+            word-break: break-all;
+            white-space: pre-wrap;
+            background-color: #f6f8fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .raw-data {
+            background: #f6f8fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #1890ff;
+            font-size: 16px;
+        }
+        
+        .error {
+            color: #ff4d4f;
+            background: #fff2f0;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ffccc7;
+        }
+        
+        .success {
+            color: #52c41a;
+            background: #f6ffed;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #b7eb8f;
+        }
+        
+        .sort-buttons button.active {
+            background-color: #096dd9;
+            border-color: #096dd9;
+        }
+        
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3px; /* 进一步减小手机端间距 */
+            margin-bottom: 15px; /* 保持与下方元素的距离 */
+        }
+
+        .category-buttons button {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+            margin: 0; /* 明确重置外边距 */
+            /* 移除旧的 margin，由父容器的 gap 控制 */
+            padding: 4px 10px; /* 减小垂直内边距，使按钮更紧凑 */
+            font-size: 14px; /* 统一字体大小 */
+        }
+        .category-buttons button:hover {
+            background-color: #bae7ff;
+        }
+
+        #scrollTopBtn {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 99;
+            border: none;
+            outline: none;
+            background-color: rgba(24, 144, 255, 0.7);
+            color: white;
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 50%;
+            font-size: 18px;
+            line-height: 1;
+            transition: background-color 0.3s, opacity 0.3s;
+        }
+
+        #scrollTopBtn:hover {
+            background-color: rgba(24, 144, 255, 1);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0; /* 在手机上移除边距，实现边缘到边缘的布局 */
+            }
+
+            .container {
+                padding: 15px 0; /* 移除水平内边距，以使内容块抵达屏幕边缘 */
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            h1 {
+                font-size: 24px; /* Smaller main title */
+                margin-bottom: 20px;
+            }
+
+            .form-row {
+                flex-direction: row; /* 在手机上并排显示 */
+                gap: 10px; /* 设置间距 */
+                align-items: flex-start;
+            }
+            
+            /* Ensure spacing between stacked items */
+            .form-row .form-group {
+                flex: 1; /* 每个项目占据均等空间 */
+                min-width: 0; /* 允许项目收缩 */
+                margin-bottom: 15px; 
+            }
+            
+            /* 调整标签和输入框以适应并排布局 */
+            .form-row label {
+                font-size: 13px;
+                white-space: nowrap;
+            }
+            .form-row input[type="number"] {
+                padding: 8px 6px; /* 减小输入框的内边距 */
+            }
+
+            /* Make main action buttons full width for easy tapping */
+            #searchLocationBtn, #searchBtn {
+                width: auto; /* 改为自适应宽度 */
+                box-sizing: border-box;
+            }
+
+            .category-buttons {
+                gap: 8px; /* 在手机端使用gap统一控制间距 */
+            }
+            
+            /* 在手机端, 让按钮成为flexbox的直接子项, 以实现自然的换行 */
+            .category-row {
+                display: contents;
+            }
+            
+            .category-buttons button {
+                margin: 0; /* 移除独立margin, 由父容器的gap控制 */
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+
+            /* Stack the POI list header (title and sort buttons) */
+            .results .result-section > div[style*="display: flex"] {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .sort-buttons {
+                justify-content: center; /* Center sort buttons */
+                flex-wrap: wrap; /* Allow buttons to wrap */
+                gap: 10px;
+            }
+
+            /* Don't let sort buttons take full width */
+            .sort-buttons button {
+                width: auto;
+                margin-left: 0 !important; /* Override inline style */
+            }
+            
+            .poi-item {
+                padding: 10px;
+            }
+
+            .poi-name {
+                font-size: 15px;
+            }
+
+            .poi-info {
+                font-size: 13px;
+            }
+            
+            #scrollTopBtn {
+                bottom: 20px;
+                right: 20px;
+                padding: 12px;
+                font-size: 16px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .category-buttons {
+                display: block; /* 在电脑端，容器本身不是grid或flex */
+                gap: 0;
+            }
+
+            .category-row {
+                display: grid;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .category-row:last-child {
+                margin-bottom: 0;
+            }
+
+            .category-row:nth-child(1) {
+                grid-template-columns: repeat(8, 1fr); /* 第一行8列 */
+            }
+
+            .category-row:nth-child(2) {
+                grid-template-columns: repeat(9, 1fr); /* 第二行9列 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ 高德地图周边搜索</h1>
+        
+        <div class="search-form">
+            <div class="form-group">
+                <label for="locationKeyword">1. 输入中心点关键字:</label>
+                <input type="text" id="locationKeyword" placeholder="例如：杭州万达" value="环球影城">
+            </div>
+            <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 搜索中心点 </button>
+            <div id="locationStatus" style="margin-top: 15px;"></div>
+
+            <div id="nearby-search-section" style="display: none;">
+                <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
+
+                <div class="form-group">
+                    <label for="keywords">2. 输入关键字或点击下方快捷分类:</label>
+                    <input type="text" id="keywords" placeholder="例如：西餐厅、火锅、星巴克等" value="中餐厅">
+                </div>
+
+                <div class="category-buttons form-group">
+                    <div class="category-row">
+                        <button onclick="searchByCategory('美食')">美食</button>
+                        <button onclick="searchByCategory('水果')">水果</button>
+                        <button onclick="searchByCategory('快餐')">快餐</button>
+                        <button onclick="searchByCategory('小吃')">小吃</button>
+                        <button onclick="searchByCategory('购物中心')">购物中心/商场</button>
+                        <button onclick="searchByCategory('美容美发')">美容美发</button>
+                        <button onclick="searchByCategory('运动场所')">运动场所</button>
+                        <button onclick="searchByCategory('休闲娱乐')">休闲娱乐</button>
+                    </div>
+                    <div class="category-row">
+                        <button onclick="searchByCategory('午餐')">午餐/晚餐</button>
+                        <button onclick="searchByCategory('冷饮')">冷饮/饮品</button>
+                        <button onclick="searchByCategory('超市')">超市/便利店</button>
+                        <button onclick="searchByCategory('买药')">买药</button>
+                        <button onclick="searchByCategory('蔬菜')">蔬菜</button>
+                        <button onclick="searchByCategory('酒店')">酒店</button>
+                        <button onclick="searchByCategory('风景')">风景</button>
+                        <button onclick="searchByCategory('电影院')">电影院</button>
+                        <button onclick="searchByCategory('咖啡')">咖啡</button>
+                    </div>
+                </div>
+                
+                <div class="form-row" style="display: none;">
+                    <div class="form-group">
+                        <label for="longitude">经度 (自动填充):</label>
+                        <input type="text" id="longitude" placeholder="待自动填充" value="" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="latitude">纬度 (自动填充):</label>
+                        <input type="text" id="latitude" placeholder="待自动填充" value="" readonly>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="radius">搜索半径（米）:</label>
+                        <input type="number" id="radius" value="5000" min="1" max="50000">
+                    </div>
+                    <div class="form-group">
+                        <label for="page">生成页码:</label>
+                        <input type="number" id="page" value="3" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="size">每页数量:</label>
+                        <input type="number" id="size" value="25" min="1" max="25">
+                    </div>
+                </div>
+                
+                <button onclick="searchNearby()" id="searchBtn">🔍 搜索周边</button>
+            </div>
+        </div>
+        
+        <div class="results" id="results"></div>
+    </div>
+
+    <a id="scrollTopBtn" title="回到顶部">▲</a>
+
+    <script>
+        // ===== 配置参数区域 - 可修改 =====
+        let locationSearchUrl = ''; // 用于存储中心点搜索的URL
+        let originalDistanceSortedPois = []; // 存储按距离排序的原始POI列表
+        let currentDisplaySort = 'comprehensive'; // 当前显示的排序规则
+        let comprehensiveSortMode = 'cost_effective'; // 综合排序的模式: 'cost_effective', 'high_end'
+        let searchCache = {}; // 新增：用于缓存搜索结果
+        let cachedSortedResults = {
+            distance: [],
+            rating: [],
+            cost_effective: [],
+            high_end: []
+        };
+
+        const CONFIG = {
+            // SCF_URL 已替换为您提供的云函数地址
+            SCF_URL: 'https://1364541279-enva6v5vqu.ap-shanghai.tencentscf.com',
+            
+            // 默认参数
+            DEFAULT_PARAMS: {
+                output: 'json',
+                show_fields: 'business'
+            }
+        };
+        
+        // ===== 主要功能函数 =====
+        
+        /**
+         * 等待指定毫秒数
+         * @param {number} ms - 等待的毫秒数
+         */
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        /**
+         * 点击分类按钮后触发搜索
+         * @param {string} category - 分类名称
+         */
+        function searchByCategory(category) {
+            document.getElementById('keywords').value = category;
+            // 统一调用新的搜索入口函数，它会处理UI更新和滚动
+            searchNearby();
+        }
+
+        // ===== POI 关键字智能映射 =====
+        const POI_KEYWORD_MAP = {
+            '050100|050200': ['餐厅', '饭店',  '吃饭','中餐厅', '中餐','午餐', '午饭', '晚餐', '晚饭'],
+            '050101': ['酒楼'],
+            '050102': ['四川菜', '川菜'],
+            '050103': ['广东菜', '粤菜'],
+            '050104': ['山东菜', '鲁菜'],
+            '050105|050107|050106': ['江苏菜', '浙江菜', '上海菜', '杭帮菜'],
+            '050108': ['湖南菜', '湘菜'],
+            '050109': ['安徽菜', '徽菜'],
+            '050111': ['北京菜'],
+            '050116': ['老字号'],
+            '050117': ['火锅店', '火锅'],
+            '050119': ['海鲜'],
+            '050120': ['素菜'],
+            '050200': ['外国餐厅'],
+            '050201': ['西餐厅', '西餐'],
+            '050300': ['快餐'],
+            '050301': ['肯德基'],
+            '050302': ['麦当劳'],
+            '050303': ['必胜客'],
+            '050305': ['茶餐厅'],
+            '050500': ['咖啡', '咖啡馆', '咖啡店'],
+            '050501': ['星巴克', '星巴克咖啡'],
+            '050600': ['喝茶'],
+            '050700': ['冷饮', '奶茶', '饮品'],
+            '050800': ['糕饼'],
+            '050900': ['甜品'],
+            '060200|060400': ['超市', '便利店'],
+            '060101': ['购物中心', '商场'],
+            '060704': ['水果', '水果店', '水果摊'],
+            '060705': ['蔬菜', '菜市场'],
+            '090601': ['买药', '药店', '药房'],
+            '100100|100101': ['酒店', '宾馆酒店', '高档酒店', '宾馆', '旅馆', '旅店'],
+            '110000': ['风景', '景点'],
+            '080100': ['运动场所'],
+            '080500|080300': ['休闲娱乐'],
+            '080600': ['电影院'],
+            '071100|090201': ['美容美发'],
+        };
+        const SORTED_KEYWORDS = Object.entries(POI_KEYWORD_MAP)
+            .flatMap(([code, keywords]) => keywords.map(kw => ({ keyword: kw, code: code })))
+            .sort((a, b) => b.keyword.length - a.keyword.length);
+
+        /**
+         * 根据用户输入查找完全匹配的POI类型。
+         * @param {string} userInput - 用户输入的关键字。
+         * @returns {string|null} - 匹配到的POI类型码，未匹配则返回null。
+         */
+        function findPoiTypeByKeyword(userInput) {
+            if (!userInput) return null;
+            // 使用完全匹配来查找，避免包含关系导致的错误
+            const found = Object.entries(POI_KEYWORD_MAP).find(([code, keywords]) => {
+                return keywords.includes(userInput);
+            });
+            return found ? found[0] : null; // 返回POI Code，如 '080000|080100'
+        }
+        
+        /**
+         * POI 列表去重
+         * @param {Array} pois - POI数组
+         * @returns {Array} - 去重后的POI数组
+         */
+        function deduplicatePois(pois) {
+            const seen = new Set();
+            return pois.filter(poi => {
+                const name = poi.name; // 按地点名称去重
+                if (seen.has(name)) {
+                    return false;
+                }
+                seen.add(name);
+                return true;
+            });
+        }
+        
+        /**
+         * 切换排序并重新渲染列表
+         * @param {'distance' | 'rating' | 'comprehensive'} sortType
+         */
+        function applySort(sortType) {
+            currentDisplaySort = sortType;
+            let listToRender = [];
+            
+            if (sortType === 'comprehensive') {
+                listToRender = cachedSortedResults[comprehensiveSortMode];
+            } else {
+                listToRender = cachedSortedResults[sortType];
+            }
+            
+            renderPoiList(listToRender);
+        }
+
+        /**
+         * 切换综合排序的模式
+         */
+        function toggleComprehensiveSort() {
+            comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
+            applySort('comprehensive');
+        }
+
+        /**
+         * 预计算所有排序
+         */
+        function precomputeAndCacheAllSorts() {
+            cachedSortedResults.distance = [...originalDistanceSortedPois];
+            cachedSortedResults.rating = sortPoisByRating(originalDistanceSortedPois);
+            cachedSortedResults.cost_effective = sortPoisByComprehensive(originalDistanceSortedPois, 'cost_effective');
+            cachedSortedResults.high_end = sortPoisByComprehensive(originalDistanceSortedPois, 'high_end');
+        }
+
+        /**
+         * 根据好评优先规则排序
+         */
+        function sortPoisByRating(pois) {
+            // 确保pois是按距离排序的
+            const sortedByDistance = [...pois].sort((a, b) => a.distance - b.distance);
+
+            const poisWithRanks = sortedByDistance.map(poi => ({
+                ...poi,
+                distanceRank: Math.floor(poi.distance / 500) + 1,
+                rating: parseFloat(poi.business?.rating) || 0,
+            }));
+
+            // 按评分降序，得到评分排名
+            const sortedByRating = [...poisWithRanks].sort((a, b) => b.rating - a.rating);
+            sortedByRating.forEach((p, i) => {
+                // 在原始数组中找到对应的poi并设置其排名
+                const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                if(originalPoi) originalPoi.ratingRank = i + 1;
+            });
+
+            // Find max ranks for normalization to ensure fair weighting
+            const maxRatingRank = poisWithRanks.length;
+            let maxDistance = 0;
+            poisWithRanks.forEach(p => {
+                if (p.distance > maxDistance) maxDistance = p.distance;
+            });
+            const maxDistanceRank = Math.floor(maxDistance / 500) + 1;
+
+            // Calculate composite score using normalized ranks
+            poisWithRanks.forEach(poi => {
+                // Normalize ranks to a 0-1 scale. If max rank is 1, all items have same rank, norm is 0.
+                const normRating = maxRatingRank > 1 ? (poi.ratingRank - 1) / (maxRatingRank - 1) : 0;
+                const normDistance = maxDistanceRank > 1 ? (poi.distanceRank - 1) / (maxDistanceRank - 1) : 0;
+                poi.compositeScore = (normRating * 0.8) + (normDistance * 0.2);
+            });
+            
+            // 按综合得分升序排序
+            poisWithRanks.sort((a, b) => a.compositeScore - b.compositeScore);
+            
+            return poisWithRanks;
+        }
+
+        /**
+         * 根据综合规则排序
+         * @param {Array} pois
+         * @param {'cost_effective' | 'high_end'} mode
+         */
+        function sortPoisByComprehensive(pois, mode) {
+            // 确保pois是按距离排序的
+            const sortedByDistance = [...pois].sort((a, b) => a.distance - b.distance);
+
+            const poisWithRanks = sortedByDistance.map(poi => ({
+                ...poi,
+                distanceRank: Math.floor(poi.distance / 500) + 1,
+                rating: parseFloat(poi.business?.rating) || 0,
+                cost: parseFloat(poi.business?.cost) || 0,
+            }));
+
+            // 评级排名 (高分在前)
+            const sortedByRating = [...poisWithRanks].sort((a, b) => b.rating - a.rating);
+            sortedByRating.forEach((p, i) => {
+                const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                if (originalPoi) originalPoi.ratingRank = i + 1;
+            });
+
+            // 人均消费排名
+            const withCost = poisWithRanks.filter(p => p.cost > 0);
+            const withoutCost = poisWithRanks.filter(p => p.cost <= 0);
+            
+            if (mode === 'cost_effective') {
+                withCost.sort((a, b) => a.cost - b.cost); // 性价比: 低消费在前
+            } else {
+                withCost.sort((a, b) => b.cost - a.cost); // 高档: 高消费在前
+            }
+
+            withCost.forEach((p, i) => {
+                const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                if (originalPoi) originalPoi.costRank = i + 1;
+            });
+
+            const lowestRank = withCost.length + 1;
+            withoutCost.forEach(p => {
+                 const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                 if (originalPoi) originalPoi.costRank = lowestRank;
+            });
+            
+            // Find max ranks for normalization
+            const maxRatingRank = poisWithRanks.length;
+            const maxCostRank = poisWithRanks.length; // All items get a costRank
+            let maxDistance = 0;
+            poisWithRanks.forEach(p => {
+                if (p.distance > maxDistance) maxDistance = p.distance;
+            });
+            const maxDistanceRank = Math.floor(maxDistance / 500) + 1;
+
+            // Define weights for different modes
+            const weights = mode === 'cost_effective'
+                ? { distance: 0.3, rating: 0.3, cost: 0.4 }
+                : { distance: 0, rating: 0.3, cost: 0.7 };
+            
+            // Calculate composite score using normalized ranks for fairness
+            poisWithRanks.forEach(p => {
+                // 对于没有消费或评分信息的POI，在性价比和高档排序中都应该排在后面
+                if (p.cost <= 0) {
+                    p.compositeScore = Infinity;
+                    return;
+                }
+
+                if (p.ratingRank && p.costRank) { // Ensure ranks exist
+                    // Normalize ranks to a 0-1 scale.
+                    const normRating = maxRatingRank > 1 ? (p.ratingRank - 1) / (maxRatingRank - 1) : 0;
+                    const normCost = maxCostRank > 1 ? (p.costRank - 1) / (maxCostRank - 1) : 0;
+                    const normDistance = maxDistanceRank > 1 ? (p.distanceRank - 1) / (maxDistanceRank - 1) : 0;
+                    
+                    p.compositeScore = (normDistance * weights.distance) + (normRating * weights.rating) + (normCost * weights.cost);
+                } else {
+                    p.compositeScore = Infinity; // Put items without full ranks at the end
+                }
+            });
+
+            // 按综合得分升序排序
+            poisWithRanks.sort((a, b) => a.compositeScore - b.compositeScore);
+            return poisWithRanks;
+        }
+
+        /**
+         * 渲染POI列表到页面
+         * @param {Array} pois - 要渲染的POI数组
+         */
+        function renderPoiList(pois) {
+            const listContainer = document.getElementById('poi-list-container');
+            if (!listContainer) return;
+            
+            let html = '';
+            pois.forEach((poi, index) => {
+                const displayType = poi.type ? (poi.type.split(';').pop() || '未分类') : '未分类';
+                html += `
+                    <div class="poi-item">
+                        <div class="poi-name">${index + 1}. ${poi.name || '未知地点'}</div>
+                        <div class="poi-info">
+                            📍 详细地址: ${buildFullAddress(poi)}<br>
+                            📞 电话: ${formatPhoneNumber(poi.business?.tel)}<br>
+                            🏷️ 类型: ${displayType}<br>
+                            📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}
+                            ${poi.business_area ? '<br>🏢 商圈: ' + poi.business_area : ''}
+                            ${poi.business?.rating && parseFloat(poi.business.rating) > 0 ? '<br>⭐ 评分: ' + poi.business.rating : ''}
+                            ${poi.business?.cost ? '<br>💰 人均: ' + poi.business.cost + '元' : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            listContainer.innerHTML = html;
+            updateSortButtonStyles();
+        }
+        
+        /**
+         * 更新排序按钮的样式
+         */
+        function updateSortButtonStyles() {
+            const buttons = document.querySelectorAll('.sort-buttons button');
+            buttons.forEach(button => {
+                if (button.dataset.sort === currentDisplaySort) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            const comprehensiveBtn = document.querySelector('button[data-sort="comprehensive"]');
+            if (comprehensiveBtn) {
+                comprehensiveBtn.textContent = comprehensiveSortMode === 'cost_effective' ? '性价比综合' : '高档综合';
+            }
+        }
+        
+        /**
+         * 格式化电话号码字符串
+         * - 去除重复号码
+         * - 去除末尾的 ',0'
+         * - 用 ' / ' 连接多个号码
+         * @param {string} telString - 原始电话号码字符串
+         * @returns {string} 格式化后的电话号码
+         */
+        function formatPhoneNumber(telString) {
+            if (!telString || typeof telString !== 'string') {
+                return '暂无电话';
+            }
+            
+            const numbers = telString.split(';').map(num => {
+                let cleanedNum = num.trim();
+                // 专门处理API可能返回的末尾为 ',0' 的情况
+                if (cleanedNum.endsWith(',0')) {
+                    cleanedNum = cleanedNum.substring(0, cleanedNum.length - 2);
+                }
+                return cleanedNum;
+            });
+
+            const uniqueNumbers = [...new Set(numbers.filter(n => n))]; // 过滤空字符串并去重
+
+            if (uniqueNumbers.length === 0) {
+                return '暂无电话';
+            }
+
+            return uniqueNumbers.join(' / ');
+        }
+        
+        /**
+         * 构建完整地址
+         */
+        function buildFullAddress(poi) {
+            const addressParts = [];
+            if (poi.cityname) addressParts.push(poi.cityname);
+            if (poi.adname) addressParts.push(poi.adname);
+            if (poi.address) addressParts.push(poi.address);
+            return addressParts.join('') || '地址未知';
+        }
+
+        /**
+         * 根据关键字搜索中心点坐标
+         */
+        async function searchLocationByKeyword() {
+            const locationKeyword = document.getElementById('locationKeyword').value.trim();
+            if (!locationKeyword) {
+                alert('请输入中心点关键字！');
+                return;
+            }
+
+            const statusDiv = document.getElementById('locationStatus');
+            const searchBtn = document.getElementById('searchLocationBtn');
+            const nearbySection = document.getElementById('nearby-search-section');
+            
+            // Invalidate cache and clear previous results
+            originalDistanceSortedPois = []; 
+            searchCache = {}; // 清空搜索缓存
+            cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
+            document.getElementById('results').innerHTML = ''; 
+            nearbySection.style.display = 'none'; // 修改中心点时隐藏下方内容
+
+            searchBtn.disabled = true;
+            searchBtn.textContent = '🔄 搜索中...';
+            statusDiv.innerHTML = `<div class="loading">正在通过关键字获取坐标...</div>`;
+            
+            const url = new URL(CONFIG.SCF_URL);
+            url.searchParams.set('apiPath', 'v5/place/text'); 
+            url.searchParams.set('keywords', locationKeyword);
+            url.searchParams.set('page_size', '1');
+            url.searchParams.set('page_num', '1');
+
+            locationSearchUrl = url.toString(); // 保存URL
+
+            try {
+                const response = await fetch(url.toString());
+                const data = await response.json();
+
+                if (data.status === '1' && data.pois && data.pois.length > 0) {
+                    const poi = data.pois[0];
+                    const location = poi.location; // "经度,纬度"
+                    if (location) {
+                        const [longitude, latitude] = location.split(',');
+                        document.getElementById('longitude').value = longitude;
+                        document.getElementById('latitude').value = latitude;
+                        
+                        const addressParts = [];
+                        if (poi.pname) addressParts.push(poi.pname);
+                        if (poi.cityname && poi.cityname !== poi.pname) addressParts.push(poi.cityname);
+                        if (poi.adname) addressParts.push(poi.adname);
+                        if (poi.address) addressParts.push(poi.address);
+                        const fullAddress = addressParts.join('') || '地址未知';
+
+                        statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong>中心点:</strong> ${poi.name}<br><strong>详细地址:</strong> ${fullAddress}</div>`;
+                        nearbySection.style.display = 'block'; // 成功后显示下方内容
+                    } else {
+                        throw new Error('API返回的POI中缺少坐标信息。');
+                    }
+                } else {
+                     throw new Error(data.info || '未能找到匹配的地点。');
+                }
+            } catch (error) {
+                console.error('❌ 中心点搜索失败:', error);
+                statusDiv.innerHTML = `<div class="error">中心点坐标获取失败: ${error.message}</div>`;
+                document.getElementById('longitude').value = '';
+                document.getElementById('latitude').value = '';
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = '📍搜索中心点';
+            }
+        }
+
+        /**
+         * 执行周边搜索 (入口函数)
+         */
+        async function searchNearby() {
+            // 注意：此函数现在是所有周边搜索的统一入口
+
+            // 1. 清理状态和缓存
+            originalDistanceSortedPois = [];
+            cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
+            currentDisplaySort = 'comprehensive';
+            comprehensiveSortMode = 'cost_effective';
+            
+            const resultsDiv = document.getElementById('results');
+
+            // Preserve the height of the results container to prevent page jump on clear
+            const currentHeight = resultsDiv.offsetHeight;
+            resultsDiv.style.minHeight = `${currentHeight > 0 ? currentHeight : 80}px`;
+
+            // 2. 立即设置加载状态的UI
+            resultsDiv.innerHTML = `
+                <div class="result-section" id="search-status-section">
+                    <h3>🔄 正在搜索，请稍候...</h3>
+                </div>
+            `;
+
+            // 滚动逻辑已移至 displayResults 函数末尾
+
+            // 4. 将实际的搜索操作推迟，以确保滚动动画流畅
+            setTimeout(doSearch, 50);
+        }
+
+        /**
+         * 核心的搜索执行函数
+         */
+        async function doSearch() {
+            const params = getSearchParams();
+            const totalPagesToFetch = parseInt(params.page_num, 10);
+            let isPoiTypeSearch = false;
+
+            if (!validateParams(params)) {
+                return;
+            }
+            
+            const userInput = params.keywords;
+            let finalTypes = null;
+            let finalKeywords = userInput;
+
+            // 最高优先级：检查输入是否为6位POI代码
+            if (/^\d{6}$/.test(userInput)) {
+                finalTypes = userInput;
+                finalKeywords = '';
+                isPoiTypeSearch = true;
+            } else {
+                // 常规逻辑：通过关键字查找POI类型 (完全匹配)
+                const matchedPoiType = findPoiTypeByKeyword(userInput);
+                if (matchedPoiType) {
+                    finalTypes = matchedPoiType;
+                    finalKeywords = '';
+                    isPoiTypeSearch = true;
+                }
+            }
+            
+            // 根据最终确定的参数生成缓存键
+            const cacheKey = JSON.stringify({ 
+                types: finalTypes || '', 
+                keywords: finalKeywords, 
+                location: params.location, 
+                radius: params.radius, 
+                page_num: totalPagesToFetch 
+            });
+
+            // 检查缓存
+            if (searchCache[cacheKey]) {
+                const cached = searchCache[cacheKey];
+                
+                originalDistanceSortedPois = [...cached.aggregatedData.pois].sort((a, b) => a.distance - b.distance);
+                precomputeAndCacheAllSorts();
+                
+                let listToDisplay;
+                if (currentDisplaySort === 'comprehensive') {
+                    listToDisplay = cachedSortedResults[comprehensiveSortMode];
+                } else {
+                    listToDisplay = cachedSortedResults[currentDisplaySort];
+                }
+
+                displayResults(cached.aggregatedData, cached.pagesFetched, listToDisplay, cached.rawFetchedCount, cached.isPoiTypeSearch, true);
+                return; // 命中缓存，立即返回
+            }
+            
+            // --- 核心搜索逻辑开始，不再处理UI加载状态 ---
+            const statusH3 = document.querySelector('#search-status-section h3');
+            const allPois = [];
+            let totalReportedCount = 0;
+            let finalStatus = '1';
+            let finalInfo = '';
+            let finalInfocode = '';
+            let lastFetchedPage = 0;
+            let pois = [];
+
+            try {
+                for (let currentPage = 1; currentPage <= totalPagesToFetch; currentPage++) {
+                    lastFetchedPage = currentPage;
+                    
+                    // 更新加载提示以显示进度
+                    if (statusH3) {
+                        statusH3.textContent = `🔄 正在搜索，请稍候... (${currentPage}/${totalPagesToFetch})`;
+                    }
+
+                    const currentParams = {
+                        ...params,
+                        page_num: currentPage,
+                        sortrule: 'distance',
+                        types: finalTypes,
+                        keywords: finalKeywords
+                    };
+                    
+                    const url = buildRequestUrl(currentParams);
+
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.status !== '1') {
+                        finalStatus = data.status;
+                        finalInfo = data.info;
+                        finalInfocode = data.infocode;
+                        console.error(`❌ 第 ${currentPage} 页请求失败:`, data.info);
+                        break; 
+                    }
+                    
+                    if (currentPage === 1) {
+                        totalReportedCount = data.count || 0;
+                    }
+                    
+                    pois = data.pois || [];
+                    allPois.push(...pois);
+
+                    if (pois.length === 0) {
+                        break;
+                    }
+
+                    if (currentPage < totalPagesToFetch) {
+                        await sleep(150);
+                    }
+                }
+
+                // 修正页码显示Bug
+                let pagesToDisplay = lastFetchedPage;
+                if (pois.length === 0 && lastFetchedPage > 0) {
+                    pagesToDisplay = lastFetchedPage - 1;
+                }
+
+                const rawFetchedCount = allPois.length;
+                const uniquePois = deduplicatePois(allPois);
+
+                const aggregatedData = {
+                    status: finalStatus,
+                    info: finalInfo,
+                    infocode: finalInfocode,
+                    count: totalReportedCount,
+                    pois: uniquePois
+                };
+
+                originalDistanceSortedPois = [...uniquePois].sort((a, b) => a.distance - b.distance);
+                precomputeAndCacheAllSorts();
+                
+                const initialPoisToDisplay = cachedSortedResults[comprehensiveSortMode];
+
+                const dataToCache = {
+                    aggregatedData: aggregatedData,
+                    pagesFetched: pagesToDisplay,
+                    rawFetchedCount: rawFetchedCount,
+                    isPoiTypeSearch: isPoiTypeSearch
+                };
+                searchCache[cacheKey] = dataToCache;
+                
+                // 首次加载时，打印原始数据
+                displayResults(aggregatedData, pagesToDisplay, initialPoisToDisplay, rawFetchedCount, isPoiTypeSearch, false);
+
+            } catch (error) {
+                console.error('❌ 请求失败:', error);
+                resultsDiv.innerHTML = `<div class="error">请求失败: ${error.message}</div>`;
+            }
+        }
+        
+        /**
+         * 获取搜索参数
+         */
+        function getSearchParams() {
+            return {
+                keywords: document.getElementById('keywords').value.trim(),
+                location: `${document.getElementById('longitude').value},${document.getElementById('latitude').value}`,
+                radius: document.getElementById('radius').value,
+                page_num: document.getElementById('page').value,
+                page_size: document.getElementById('size').value
+            };
+        }
+        
+        /**
+         * 验证参数
+         */
+        function validateParams(params) {
+            const [lng, lat] = params.location.split(',');
+            if (!lng || !lat || isNaN(lng) || isNaN(lat)) {
+                alert('中心点位置未获取！');
+                return false;
+            }
+
+            if (!params.keywords) {
+                alert('请输入周边搜索关键字！');
+                return false;
+            }
+            
+            if (!params.radius || params.radius < 1 || params.radius > 50000) {
+                alert('搜索半径必须在1-50000米之间！');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        /**
+         * 构建请求URL
+         */
+        function buildRequestUrl(params) {
+            // 基础参数，不包含keywords和types，避免污染
+            const baseParams = {
+                location: params.location,
+                radius: params.radius,
+                page_num: params.page_num,
+                page_size: params.page_size,
+                sortrule: params.sortrule,
+                ...CONFIG.DEFAULT_PARAMS
+            };
+
+            const url = new URL(CONFIG.SCF_URL);
+            const urlParams = new URLSearchParams(baseParams);
+
+            // 告诉云函数目标路径
+            urlParams.set('apiPath', 'v5/place/around');
+
+            // 根据最终确定的参数，只添加其中一个，确保请求纯粹性
+            if (params.types) {
+                urlParams.set('types', params.types);
+            } else if (params.keywords) {
+                urlParams.set('keywords', params.keywords);
+            }
+            
+            url.search = urlParams.toString();
+            return url.toString();
+        }
+        
+        /**
+         * 显示搜索结果
+         */
+        function displayResults(data, pagesFetched, initialPois, rawFetchedCount, isPoiTypeSearch, isFromCache = false) {
+            if (!isFromCache) {
+                console.log('📋 原始返回数据:', JSON.stringify(data, null, 2));
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            const statusSection = document.getElementById('search-status-section');
+
+            // 安全校验，确保加载状态的容器存在
+            if (!statusSection) {
+                resultsDiv.innerHTML = '<div class="error">渲染错误：找不到状态显示区域。</div>';
+                return;
+            }
+
+            // 清理旧的POI列表和原始数据（如果有）
+            const oldPoiList = document.getElementById('poi-list-section');
+            if (oldPoiList) oldPoiList.remove();
+            const oldRawData = document.querySelector('.raw-data-section');
+            if (oldRawData) oldRawData.remove();
+
+            if (data.status === '1') {
+                const displayedCount = initialPois.length;
+                const searchMessage = isPoiTypeSearch ? '类型搜索成功' : '关键字搜索成功';
+                
+                let successMessage = `在 ${pagesFetched} 页中，共为您找到 ${rawFetchedCount} 个地点，去重后显示 ${displayedCount} 个。`;
+                if (rawFetchedCount === displayedCount) {
+                    successMessage = `在 ${pagesFetched} 页中，共为您找到 ${displayedCount} 个地点 (无重复)。`;
+                }
+                
+                // 更新状态区域为"成功"
+                statusSection.innerHTML = `
+                    <h3>✅ ${searchMessage}</h3>
+                    <div class="success">
+                       ${successMessage}
+                    </div>
+                `;
+                
+                if (initialPois.length > 0) {
+                    // 创建并追加新的POI列表区域
+                    const poiListSection = document.createElement('div');
+                    poiListSection.id = 'poi-list-section';
+                    poiListSection.className = 'result-section';
+
+                    poiListSection.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">📍 地点列表</h3>
+                            <div class="sort-buttons">
+                                <button onclick="applySort('rating')" data-sort="rating" title="点击按好评度排序" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">好评优先</button>
+                                <button onclick="toggleComprehensiveSort()" data-sort="comprehensive" title="点击切换综合排序模式" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">性价比综合</button>
+                                <button onclick="applySort('distance')" data-sort="distance" title="点击按距离排序" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">距离优先</button>
+                            </div>
+                        </div>
+                        <div id="poi-list-container"></div>
+                    `;
+                    resultsDiv.appendChild(poiListSection);
+                    
+                    renderPoiList(initialPois);
+                }
+
+            } else { // 错误情况
+                const errorMsg = data.info || '未知错误';
+                const infoCode = data.infocode || '';
+                
+                console.error('❌ API返回错误:', data);
+                
+                // 更新状态区域为"失败"
+                statusSection.innerHTML = `
+                    <h3>❌ 搜索失败</h3>
+                    <div class="error">
+                        错误信息: ${errorMsg}<br>
+                        错误代码: ${infoCode}
+                    </div>
+                `;
+                
+                // 创建并追加原始数据区域
+                const rawDataSection = document.createElement('div');
+                rawDataSection.className = 'result-section raw-data-section';
+                rawDataSection.innerHTML = `
+                    <h3>📋 原始返回数据</h3>
+                    <div class="raw-data">${JSON.stringify(data, null, 2)}</div>
+                `;
+                resultsDiv.appendChild(rawDataSection);
+            }
+
+            const resultsContainer = document.getElementById('results');
+            
+            // 在所有UI更新完成后，将状态区域滚动到视图顶部
+            const statusSectionToScroll = document.getElementById('search-status-section');
+            if (statusSectionToScroll) {
+                statusSectionToScroll.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // Reset the container's height so it can shrink if needed
+            resultsContainer.style.minHeight = '';
+        }
+        
+        /**
+         * 如果需要，则平滑滚动到结果区域
+         */
+        function scrollToResultsIfNeeded() {
+            setTimeout(() => {
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+        
+        // ===== 页面加载完成后的初始化 =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const locationKeywordInput = document.getElementById('locationKeyword');
+
+            // 当用户修改中心点关键字时，立即隐藏下方的周边搜索区域和状态信息
+            locationKeywordInput.addEventListener('input', function() {
+                document.getElementById('nearby-search-section').style.display = 'none';
+                document.getElementById('locationStatus').innerHTML = ''; // 同时清除旧的状态信息
+            });
+
+            // 绑定回车键为周边搜索
+            document.getElementById('keywords').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchNearby();
+                }
+            });
+
+            // 绑定中心点关键字搜索的回车键
+            document.getElementById('locationKeyword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchLocationByKeyword();
+                }
+            });
+
+            // "回到顶部" 按钮功能
+            const scrollTopBtn = document.getElementById('scrollTopBtn');
+
+            // 当用户滚动页面时，决定是否显示按钮
+            window.onscroll = function() {
+                // 结合多种方式获取滚动距离，以实现最佳兼容性
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+                if (scrollTop > 200) {
+                    scrollTopBtn.style.display = "block";
+                } else {
+                    scrollTopBtn.style.display = "none";
+                }
+            };
+
+            // 当用户点击按钮时，平滑滚动到顶部
+            scrollTopBtn.addEventListener('click', function() {
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            });
+        });
+    </script>
+</body>
+</html>
