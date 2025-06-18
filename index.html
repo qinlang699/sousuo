@@ -96,11 +96,31 @@
             box-sizing: border-box;
         }
         
+        /* Custom styles for radius and totalCount inputs */
+        #radius, .input-stepper {
+            max-width: 120%;
+        }
+
+        #radius, #totalCount {
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+        
         .form-row {
             display: flex;
             gap: 15px;
         }
         
+        .form-row.form-row-tight {
+            justify-content: center; /* Center the compact items within the row */
+            gap: 20px; /* Increased gap to add more space between items */
+        }
+
+        /* For rows that should not have flexible, growing children */
+        .form-row.form-row-tight .form-group {
+            flex: none; /* Override flex: 1 to make items shrink to content width */
+        }
+
         .form-row .form-group {
             flex: 1;
         }
@@ -157,6 +177,11 @@
         .poi-item:hover {
             transform: translateY(-2px); /* 悬浮时轻微上移 */
             box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬浮时阴影更明显 */
+        }
+        
+        .poi-link {
+            text-decoration: none; /* 移除链接下划线 */
+            color: inherit; /* 继承父元素颜色 */
         }
         
         .poi-name {
@@ -384,6 +409,61 @@
                 grid-template-columns: repeat(9, 1fr); /* 第二行9列 */
             }
         }
+
+        /* Styles for stepper buttons */
+        .input-stepper {
+            display: flex;
+        }
+        .input-stepper input[type="number"] {
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+            position: relative;
+            /* Hide ugly default arrows */
+            -moz-appearance: textfield;
+        }
+        .input-stepper input[type="number"]::-webkit-outer-spin-button,
+        .input-stepper input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .stepper-buttons {
+            display: flex;
+            flex-direction: column;
+            width: 40px; /* Width of the buttons area, increased from 30px */
+            border: 1px solid #ddd;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .stepper-btn {
+            background-color: #1890ff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 10px;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1; /* Each button takes half the available height */
+            line-height: 0;
+            transition: background-color 0.3s;
+        }
+        .stepper-btn:hover {
+            background-color: #40a9ff;
+        }
+        
+        #increaseBtn {
+            border-bottom: 1px solid #40a9ff; /* Lighter separator for contrast */
+            border-radius: 0;
+        }
+        
+        #decreaseBtn {
+            border-top: none;
+            border-radius: 0;
+        }
     </style>
 </head>
 <body>
@@ -395,7 +475,7 @@
                 <label for="locationKeyword">1. 输入中心点关键字:</label>
                 <input type="text" id="locationKeyword" placeholder="例如：杭州万达" value="环球影城">
             </div>
-            <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 搜索中心点 </button>
+            <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
 
             <div id="nearby-search-section" style="display: none;">
@@ -441,18 +521,20 @@
                     </div>
                 </div>
                 
-                <div class="form-row">
+                <div class="form-row form-row-tight">
                     <div class="form-group">
-                        <label for="radius">搜索半径（米）:</label>
+                        <label for="radius">搜索半径:</label>
                         <input type="number" id="radius" value="5000" min="1" max="50000">
                     </div>
                     <div class="form-group">
-                        <label for="page">生成页码:</label>
-                        <input type="number" id="page" value="3" min="1" max="100">
-                    </div>
-                    <div class="form-group">
-                        <label for="size">每页数量:</label>
-                        <input type="number" id="size" value="25" min="1" max="25">
+                        <label for="totalCount">生成数量:</label>
+                        <div class="input-stepper">
+                            <input type="number" id="totalCount" value="50" min="0" max="2500" placeholder="要显示的结果数量">
+                            <div class="stepper-buttons">
+                                <button id="increaseBtn" class="stepper-btn" aria-label="增加数量">▲</button>
+                                <button id="decreaseBtn" class="stepper-btn" aria-label="减少数量">▼</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -472,6 +554,7 @@
         let currentDisplaySort = 'comprehensive'; // 当前显示的排序规则
         let comprehensiveSortMode = 'cost_effective'; // 综合排序的模式: 'cost_effective', 'high_end'
         let searchCache = {}; // 新增：用于缓存搜索结果
+        let locationCache = {}; // 新增：用于缓存中心点搜索结果
         let cachedSortedResults = {
             distance: [],
             rating: [],
@@ -613,11 +696,12 @@
         /**
          * 预计算所有排序
          */
-        function precomputeAndCacheAllSorts() {
-            cachedSortedResults.distance = [...originalDistanceSortedPois];
-            cachedSortedResults.rating = sortPoisByRating(originalDistanceSortedPois);
-            cachedSortedResults.cost_effective = sortPoisByComprehensive(originalDistanceSortedPois, 'cost_effective');
-            cachedSortedResults.high_end = sortPoisByComprehensive(originalDistanceSortedPois, 'high_end');
+        function precomputeAndCacheAllSorts(limit) {
+            const effectiveLimit = limit > 0 ? limit : originalDistanceSortedPois.length;
+            cachedSortedResults.distance = [...originalDistanceSortedPois].slice(0, effectiveLimit);
+            cachedSortedResults.rating = sortPoisByRating(originalDistanceSortedPois).slice(0, effectiveLimit);
+            cachedSortedResults.cost_effective = sortPoisByComprehensive(originalDistanceSortedPois, 'cost_effective').slice(0, effectiveLimit);
+            cachedSortedResults.high_end = sortPoisByComprehensive(originalDistanceSortedPois, 'high_end').slice(0, effectiveLimit);
         }
 
         /**
@@ -757,23 +841,53 @@
             let html = '';
             pois.forEach((poi, index) => {
                 const displayType = poi.type ? (poi.type.split(';').pop() || '未分类') : '未分类';
+                const mapUrl = getMapUrl(poi);
+                
                 html += `
-                    <div class="poi-item">
-                        <div class="poi-name">${index + 1}. ${poi.name || '未知地点'}</div>
-                        <div class="poi-info">
-                            📍 详细地址: ${buildFullAddress(poi)}<br>
-                            📞 电话: ${formatPhoneNumber(poi.business?.tel)}<br>
-                            🏷️ 类型: ${displayType}<br>
-                            📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}
-                            ${poi.business_area ? '<br>🏢 商圈: ' + poi.business_area : ''}
-                            ${poi.business?.rating && parseFloat(poi.business.rating) > 0 ? '<br>⭐ 评分: ' + poi.business.rating : ''}
-                            ${poi.business?.cost ? '<br>💰 人均: ' + poi.business.cost + '元' : ''}
+                    <a href="${mapUrl}" target="_blank" class="poi-link">
+                        <div class="poi-item">
+                            <div class="poi-name">${index + 1}. ${poi.name || '未知地点'}</div>
+                            <div class="poi-info">
+                                📍 详细地址: ${buildFullAddress(poi)}<br>
+                                📞 电话: ${formatPhoneNumber(poi.business?.tel)}<br>
+                                🏷️ 类型: ${displayType}<br>
+                                📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}
+                                ${poi.business_area ? '<br>🏢 商圈: ' + poi.business_area : ''}
+                                ${poi.business?.rating && parseFloat(poi.business.rating) > 0 ? '<br>⭐ 评分: ' + poi.business.rating : ''}
+                                ${poi.business?.cost ? '<br>💰 人均: ' + poi.business.cost + '元' : ''}
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 `;
             });
             listContainer.innerHTML = html;
             updateSortButtonStyles();
+        }
+        
+        /**
+         * 根据设备类型生成跳转高德地图的URL
+         * @param {object} poi - POI对象
+         * @returns {string} - 跳转链接
+         */
+        function getMapUrl(poi) {
+            const ua = navigator.userAgent.toLowerCase();
+            const poiName = encodeURIComponent(poi.name);
+            const locationParts = poi.location.split(',');
+            const lon = locationParts[0];
+            const lat = locationParts[1];
+
+            // 判断是否为iOS设备
+            if (/iphone|ipad|ipod/.test(ua)) {
+                return `iosamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
+            } 
+            
+            // 判断是否为Android设备
+            if (/android/.test(ua)) {
+                return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
+            }
+
+            // 如果是PC或其他设备，提供一个指向高德网页地图的链接作为备用
+            return `https://www.amap.com/search?query=${poiName}&city=${poi.adcode || ''}`;
         }
         
         /**
@@ -838,6 +952,32 @@
         }
 
         /**
+         * 处理并显示中心点POI信息
+         * @param {object} poi - POI对象
+         * @param {boolean} fromCache - 是否来自缓存
+         */
+        function processLocationPoi(poi, fromCache = false) {
+            const location = poi.location;
+            if (!location) {
+                throw new Error('API返回的POI中缺少坐标信息。');
+            }
+            const [longitude, latitude] = location.split(',');
+            document.getElementById('longitude').value = longitude;
+            document.getElementById('latitude').value = latitude;
+            
+            const addressParts = [];
+            if (poi.pname) addressParts.push(poi.pname);
+            if (poi.cityname && poi.cityname !== poi.pname) addressParts.push(poi.cityname);
+            if (poi.adname) addressParts.push(poi.adname);
+            if (poi.address) addressParts.push(poi.address);
+            const fullAddress = addressParts.join('') || '地址未知';
+
+            const statusDiv = document.getElementById('locationStatus');
+            statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong>中心点:</strong> ${poi.name}<br><strong>详细地址:</strong> ${fullAddress}</div>`;
+            document.getElementById('nearby-search-section').style.display = 'block';
+        }
+
+        /**
          * 根据关键字搜索中心点坐标
          */
         async function searchLocationByKeyword() {
@@ -853,10 +993,21 @@
             
             // Invalidate cache and clear previous results
             originalDistanceSortedPois = []; 
-            searchCache = {}; // 清空搜索缓存
+            searchCache = {}; // 清空周边搜索缓存
             cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
             document.getElementById('results').innerHTML = ''; 
             nearbySection.style.display = 'none'; // 修改中心点时隐藏下方内容
+
+            // 检查中心点缓存
+            if (locationCache[locationKeyword]) {
+                try {
+                    processLocationPoi(locationCache[locationKeyword], true);
+                } catch (error) {
+                    statusDiv.innerHTML = `<div class="error">缓存数据处理失败: ${error.message}</div>`;
+                    delete locationCache[locationKeyword]; // 移除错误的缓存
+                }
+                return; // 从缓存加载后直接返回
+            }
 
             searchBtn.disabled = true;
             searchBtn.textContent = '🔄 搜索中...';
@@ -876,24 +1027,8 @@
 
                 if (data.status === '1' && data.pois && data.pois.length > 0) {
                     const poi = data.pois[0];
-                    const location = poi.location; // "经度,纬度"
-                    if (location) {
-                        const [longitude, latitude] = location.split(',');
-                        document.getElementById('longitude').value = longitude;
-                        document.getElementById('latitude').value = latitude;
-                        
-                        const addressParts = [];
-                        if (poi.pname) addressParts.push(poi.pname);
-                        if (poi.cityname && poi.cityname !== poi.pname) addressParts.push(poi.cityname);
-                        if (poi.adname) addressParts.push(poi.adname);
-                        if (poi.address) addressParts.push(poi.address);
-                        const fullAddress = addressParts.join('') || '地址未知';
-
-                        statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong>中心点:</strong> ${poi.name}<br><strong>详细地址:</strong> ${fullAddress}</div>`;
-                        nearbySection.style.display = 'block'; // 成功后显示下方内容
-                    } else {
-                        throw new Error('API返回的POI中缺少坐标信息。');
-                    }
+                    locationCache[locationKeyword] = poi; // 将成功的结果存入缓存
+                    processLocationPoi(poi, false);
                 } else {
                      throw new Error(data.info || '未能找到匹配的地点。');
                 }
@@ -904,7 +1039,7 @@
                 document.getElementById('latitude').value = '';
             } finally {
                 searchBtn.disabled = false;
-                searchBtn.textContent = '📍搜索中心点';
+                searchBtn.textContent = '📍定位中心点';
             }
         }
 
@@ -984,7 +1119,7 @@
                 const cached = searchCache[cacheKey];
                 
                 originalDistanceSortedPois = [...cached.aggregatedData.pois].sort((a, b) => a.distance - b.distance);
-                precomputeAndCacheAllSorts();
+                precomputeAndCacheAllSorts(params.requested_count);
                 
                 let listToDisplay;
                 if (currentDisplaySort === 'comprehensive') {
@@ -1071,7 +1206,7 @@
                 };
 
                 originalDistanceSortedPois = [...uniquePois].sort((a, b) => a.distance - b.distance);
-                precomputeAndCacheAllSorts();
+                precomputeAndCacheAllSorts(params.requested_count);
                 
                 const initialPoisToDisplay = cachedSortedResults[comprehensiveSortMode];
 
@@ -1096,12 +1231,17 @@
          * 获取搜索参数
          */
         function getSearchParams() {
+            const requestedCount = parseInt(document.getElementById('totalCount').value, 10) || 0;
+            // 计算需要请求的页数，确保能覆盖用户请求的数量
+            const pageNum = requestedCount > 0 ? Math.ceil(requestedCount / 25) : 0;
+
             return {
                 keywords: document.getElementById('keywords').value.trim(),
                 location: `${document.getElementById('longitude').value},${document.getElementById('latitude').value}`,
                 radius: document.getElementById('radius').value,
-                page_num: document.getElementById('page').value,
-                page_size: document.getElementById('size').value
+                page_num: pageNum,
+                page_size: 25, // 每页数量固定为25
+                requested_count: requestedCount // 把用户请求的数量也传出去
             };
         }
         
@@ -1117,11 +1257,6 @@
 
             if (!params.keywords) {
                 alert('请输入周边搜索关键字！');
-                return false;
-            }
-            
-            if (!params.radius || params.radius < 1 || params.radius > 50000) {
-                alert('搜索半径必须在1-50000米之间！');
                 return false;
             }
             
@@ -1186,10 +1321,7 @@
                 const displayedCount = initialPois.length;
                 const searchMessage = isPoiTypeSearch ? '类型搜索成功' : '关键字搜索成功';
                 
-                let successMessage = `在 ${pagesFetched} 页中，共为您找到 ${rawFetchedCount} 个地点，去重后显示 ${displayedCount} 个。`;
-                if (rawFetchedCount === displayedCount) {
-                    successMessage = `在 ${pagesFetched} 页中，共为您找到 ${displayedCount} 个地点 (无重复)。`;
-                }
+                let successMessage = `为您找到 ${displayedCount}个地点。`;
                 
                 // 更新状态区域为"成功"
                 statusSection.innerHTML = `
@@ -1270,11 +1402,67 @@
         // ===== 页面加载完成后的初始化 =====
         document.addEventListener('DOMContentLoaded', function() {
             const locationKeywordInput = document.getElementById('locationKeyword');
+            const totalCountInput = document.getElementById('totalCount');
+            const increaseBtn = document.getElementById('increaseBtn');
+            const decreaseBtn = document.getElementById('decreaseBtn');
+            const radiusInput = document.getElementById('radius');
 
             // 当用户修改中心点关键字时，立即隐藏下方的周边搜索区域和状态信息
             locationKeywordInput.addEventListener('input', function() {
                 document.getElementById('nearby-search-section').style.display = 'none';
                 document.getElementById('locationStatus').innerHTML = ''; // 同时清除旧的状态信息
+            });
+            
+            // 为"生成数量"输入框添加事件监听，自动校准为非负数
+            totalCountInput.addEventListener('change', function() {
+                let value = parseInt(this.value, 10);
+                if (isNaN(value) || value < 0) {
+                    this.value = 0;
+                }
+            });
+
+            // "生成数量" 增加按钮
+            increaseBtn.addEventListener('click', function() {
+                let currentValue = parseInt(totalCountInput.value, 10) || 0;
+                const max = parseInt(totalCountInput.max, 10);
+                let newValue = currentValue + 25;
+                if (newValue > max) {
+                    newValue = max;
+                }
+                totalCountInput.value = newValue;
+            });
+
+            // "生成数量" 减少按钮
+            decreaseBtn.addEventListener('click', function() {
+                let currentValue = parseInt(totalCountInput.value, 10) || 0;
+                const min = parseInt(totalCountInput.min, 10);
+                let newValue = currentValue - 25;
+                if (newValue < min) {
+                    newValue = min;
+                }
+                totalCountInput.value = newValue;
+            });
+
+            // 搜索半径输入框自动校准
+            radiusInput.addEventListener('change', function() {
+                let value = parseInt(this.value, 10);
+                const min = parseInt(this.min, 10);
+                const max = parseInt(this.max, 10);
+
+                if (isNaN(value)) {
+                    this.value = min; // 如果输入不是数字，则重置为最小值
+                    return;
+                }
+                
+                value = Math.floor(value);
+
+                if (value < min) {
+                    this.value = min;
+                } else if (value > max) {
+                    this.value = max;
+                } else {
+                    this.value = value;
+                }
             });
 
             // 绑定回车键为周边搜索
