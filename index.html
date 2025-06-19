@@ -172,11 +172,15 @@
             border-left: 4px solid #1890ff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 添加立体阴影 */
             transition: box-shadow 0.3s ease, transform 0.3s ease; /* 添加过渡效果 */
+            position: relative; /* 为绝对定位的子元素提供容器 */
         }
         
         .poi-item:hover {
             transform: translateY(-2px); /* 悬浮时轻微上移 */
             box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬浮时阴影更明显 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: opacity 0.3s ease;
         }
         
         .poi-link {
@@ -188,13 +192,36 @@
             font-size: 16px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 5px;
+            /* The following styles make the name an absolutely positioned overlay */
+            position: absolute;
+            top: 15px; /* Align with parent's padding */
+            left: 15px; /* Align with parent's padding */
+            right: 175px; /* Leave space for the 150px photo + 10px gap + 15px padding */
+            white-space: nowrap; /* Force single-line display */
         }
         
         .poi-info {
             color: #666;
             font-size: 14px;
-            line-height: 1.5;
+            padding-right: 165px; /* 为右侧图片留出空间 */
+            margin-top: 25px; /* Add margin to push it below the absolute .poi-name */
+            line-height: 1.6; /* Apply consistent line-height to all lines */
+        }
+        
+        /* Reverted the previous attempt and using hanging indent */
+        .poi-info-line {
+            padding-left: 1.7em; /* Indent for icon+space, adjusted for alignment */
+            text-indent: -1.7em; /* Outdent first line to pull the icon back */
+            margin-bottom: 2px; /* Small gap between lines */
+        }
+        
+        .poi-info-label {
+            flex-shrink: 0;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+        .poi-info-value {
+            /* This value will now wrap correctly on its own */
         }
         
         .poi-info code {
@@ -366,15 +393,26 @@
             }
             
             .poi-item {
-                padding: 10px;
+                padding: 15px;
+                min-height: 175px; /* 增大最小高度以确保图片完整显示 */
             }
 
             .poi-name {
                 font-size: 15px;
+                padding-right: 145px; /* 为图片留出空间: 120px(图宽) + 15px(右边距) + 10px(空隙) */
             }
-
+            
             .poi-info {
                 font-size: 13px;
+                padding-right: 160px; /* 增大右侧内边距，强制地址提前换行 */
+            }
+            
+            .poi-item-photo {
+                width: 120px;
+                height: 120px;
+                bottom: 15px;
+                right: 15px;
+                z-index: 5;
             }
             
             #scrollTopBtn {
@@ -464,11 +502,216 @@
             border-top: none;
             border-radius: 0;
         }
+
+        /* Styles for the new photo gallery */
+        .photo-gallery-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .photo-gallery-container h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .photo-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background-color: #f0f0f0;
+            aspect-ratio: 1 / 1;
+        }
+        
+        .gallery-item a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .gallery-item .poi-name-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            padding: 20px 8px 8px 8px;
+            font-size: 13px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: opacity 0.3s ease;
+        }
+
+        .poi-item-photo {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            height: 150px; /* 调整高度以匹配画廊 */
+            width: 150px;  /* 调整宽度以匹配画廊，使其为正方形 */
+            border-radius: 8px; /* 与画廊样式同步 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 与画廊样式同步 */
+            object-fit: cover; /* 确保图片不变形 */
+            z-index: 5;
+            cursor: pointer;
+            transition: none; /* 移除过渡效果 */
+        }
+        .poi-item-photo:hover {
+            transform: none; /* 移除悬浮放大效果 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 保持阴影不变 */
+            z-index: 5;
+        }
+
+        /* Lightbox Styles */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: auto; /* Let left/right determine width */
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .lightbox-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Crucial for the slide animation */
+        }
+
+        .lightbox-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 5px;
+            /* Animation is now handled by JS with transitions */
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .lightbox-close:hover,
+        .lightbox-close:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        .lightbox-prev, .lightbox-next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 16px;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            background-color: rgba(0,0,0,0.3);
+            /* Arrows are now visible by default on desktop */
+            z-index: 1002; /* Ensure they are above the content */
+        }
+
+        .lightbox-prev {
+            left: 15px; /* Adjust position */
+        }
+
+        .lightbox-next {
+            right: 15px; /* Adjust position */
+        }
+
+        .lightbox-prev:hover, .lightbox-next:hover {
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .lightbox-caption {
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            /* ... existing mobile styles ... */
+            .lightbox-prev, .lightbox-next {
+                display: none; /* Hide arrows on mobile to favor swiping */
+            }
+        }
+
+        @keyframes slide-in-from-right {
+            from { transform: translateX(110%); } /* Start slightly off-screen */
+            to { transform: translateX(0); }
+        }
+        @keyframes slide-out-to-left {
+            from { transform: translateX(0); }
+            to { transform: translateX(-110%); } /* End slightly off-screen */
+        }
+        @keyframes slide-in-from-left {
+            from { transform: translateX(-110%); } /* Start slightly off-screen */
+            to { transform: translateX(0); }
+        }
+        @keyframes slide-out-to-right {
+            from { transform: translateX(0); }
+            to { transform: translateX(110%); } /* End slightly off-screen */
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🗺️ 高德地图周边搜索</h1>
+        
         
         <div class="search-form">
             <div class="form-group">
@@ -523,7 +766,7 @@
                 
                 <div class="form-row form-row-tight">
                     <div class="form-group">
-                        <label for="radius">搜索半径:</label>
+                        <label for="radius">搜索半径(米):</label>
                         <input type="number" id="radius" value="5000" min="1" max="50000">
                     </div>
                     <div class="form-group">
@@ -545,6 +788,17 @@
         <div class="results" id="results"></div>
     </div>
 
+    <!-- Lightbox Structure -->
+    <div id="lightbox" class="lightbox-overlay" style="display: none;">
+        <span class="lightbox-close">&times;</span>
+        <div class="lightbox-content">
+            <!-- Images are injected by JavaScript -->
+        </div>
+        <a class="lightbox-prev">&#10094;</a>
+        <a class="lightbox-next">&#10095;</a>
+        <div class="lightbox-caption"></div>
+    </div>
+
     <a id="scrollTopBtn" title="回到顶部">▲</a>
 
     <script>
@@ -561,15 +815,20 @@
             cost_effective: [],
             high_end: []
         };
+        let allPoiPhotos = [];
+        let currentLightboxIndex = 0;
+        let currentPoiPhotos = []; // Holds photos for the currently viewed POI
+        let currentPhotoIndex = 0; // Index of the photo shown in the lightbox
+        let isLightboxAnimating = false; // Animation lock
 
         const CONFIG = {
             // SCF_URL 已替换为您提供的云函数地址
             SCF_URL: 'https://1364541279-enva6v5vqu.ap-shanghai.tencentscf.com',
             
-            // 默认参数
+            // 默认参数 - 改为直接获取包含图片在内的所有需要的信息
             DEFAULT_PARAMS: {
                 output: 'json',
-                show_fields: 'business'
+                show_fields: 'business,photos'
             }
         };
         
@@ -583,6 +842,20 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
         
+        /**
+         * Truncate string if it exceeds a certain length
+         * @param {string} str The string to truncate
+         * @param {number} num The max number of characters
+         * @returns {string}
+         */
+        function truncateString(str, num) {
+            if (!str) return '';
+            if (str.length <= num) {
+                return str;
+            }
+            return str.slice(0, num) + '...';
+        }
+
         /**
          * 点击分类按钮后触发搜索
          * @param {string} category - 分类名称
@@ -842,20 +1115,39 @@
             pois.forEach((poi, index) => {
                 const displayType = poi.type ? (poi.type.split(';').pop() || '未分类') : '未分类';
                 const mapUrl = getMapUrl(poi);
+                const poiName = truncateString(poi.name || '未知地点', 20);
+
+                let photoHtml = '';
+                if (poi.photos && poi.photos.length > 0) {
+                    const firstPhotoUrl = poi.photos[0].url;
+                    // Escape quotes for the HTML attribute.
+                    const photosJson = JSON.stringify(poi.photos).replace(/"/g, '&quot;');
+                    photoHtml = `<img src="${firstPhotoUrl}" class="poi-item-photo lightbox-trigger" alt="${poi.name}" loading="lazy" data-photos="${photosJson}" data-poi-id="${poi.id}" title="点击预览 ${poi.photos.length} 张图片">`;
+                }
+
+                let infoHtml = `<div class="poi-info-line">📍 详细地址: ${buildFullAddress(poi)}</div>`;
+                infoHtml += `<div class="poi-info-line">📞 电话: ${formatPhoneNumber(poi.business?.tel)}</div>`;
+                infoHtml += `<div class="poi-info-line">🏷️ 类型: ${displayType}</div>`;
+                infoHtml += `<div class="poi-info-line">📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}</div>`;
+                
+                if (poi.business_area) {
+                    infoHtml += `<div class="poi-info-line">🏢 商圈: ${poi.business_area}</div>`;
+                }
+                if (poi.business?.rating && parseFloat(poi.business.rating) > 0) {
+                    infoHtml += `<div class="poi-info-line">⭐ 评分: ${poi.business.rating}</div>`;
+                }
+                if (poi.business?.cost) {
+                    infoHtml += `<div class="poi-info-line">💰 人均: ${poi.business.cost}元</div>`;
+                }
                 
                 html += `
                     <a href="${mapUrl}" target="_blank" class="poi-link">
                         <div class="poi-item">
-                            <div class="poi-name">${index + 1}. ${poi.name || '未知地点'}</div>
+                            <div class="poi-name">${index + 1}. ${poiName}</div>
                             <div class="poi-info">
-                                📍 详细地址: ${buildFullAddress(poi)}<br>
-                                📞 电话: ${formatPhoneNumber(poi.business?.tel)}<br>
-                                🏷️ 类型: ${displayType}<br>
-                                📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}
-                                ${poi.business_area ? '<br>🏢 商圈: ' + poi.business_area : ''}
-                                ${poi.business?.rating && parseFloat(poi.business.rating) > 0 ? '<br>⭐ 评分: ' + poi.business.rating : ''}
-                                ${poi.business?.cost ? '<br>💰 人均: ' + poi.business.cost + '元' : ''}
+                                ${infoHtml}
                             </div>
+                            ${photoHtml}
                         </div>
                     </a>
                 `;
@@ -870,24 +1162,14 @@
          * @returns {string} - 跳转链接
          */
         function getMapUrl(poi) {
-            const ua = navigator.userAgent.toLowerCase();
             const poiName = encodeURIComponent(poi.name);
             const locationParts = poi.location.split(',');
             const lon = locationParts[0];
             const lat = locationParts[1];
-
-            // 判断是否为iOS设备
-            if (/iphone|ipad|ipod/.test(ua)) {
-                return `iosamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
-            } 
             
-            // 判断是否为Android设备
-            if (/android/.test(ua)) {
-                return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
-            }
-
-            // 如果是PC或其他设备，提供一个指向高德网页地图的链接作为备用
-            return `https://www.amap.com/search?query=${poiName}&city=${poi.adcode || ''}`;
+            // 使用高德地图官方推荐的统一URI API，它会自动处理PC和移动端
+            // 这比自己检测UA更可靠，能从根本上解决跳转问题
+            return `https://uri.amap.com/marker?position=${lon},${lat}&name=${poiName}&src=mypage&coordinate=gaode&callnative=1`;
         }
         
         /**
@@ -937,7 +1219,7 @@
                 return '暂无电话';
             }
 
-            return uniqueNumbers.join(' / ');
+            return uniqueNumbers.join('<br>');
         }
         
         /**
@@ -1064,11 +1346,9 @@
             // 2. 立即设置加载状态的UI
             resultsDiv.innerHTML = `
                 <div class="result-section" id="search-status-section">
-                    <h3>🔄 正在搜索，请稍候...</h3>
+                    <h3>🔄 正在搜索地点列表，请稍候...</h3>
                 </div>
             `;
-
-            // 滚动逻辑已移至 displayResults 函数末尾
 
             // 4. 将实际的搜索操作推迟，以确保滚动动画流畅
             setTimeout(doSearch, 50);
@@ -1132,7 +1412,7 @@
                 return; // 命中缓存，立即返回
             }
             
-            // --- 核心搜索逻辑开始，不再处理UI加载状态 ---
+            // --- 核心搜索逻辑开始 ---
             const statusH3 = document.querySelector('#search-status-section h3');
             const allPois = [];
             let totalReportedCount = 0;
@@ -1143,12 +1423,12 @@
             let pois = [];
 
             try {
+                // --- 步骤 1: 获取所有页的基础 POI 数据 ---
                 for (let currentPage = 1; currentPage <= totalPagesToFetch; currentPage++) {
                     lastFetchedPage = currentPage;
                     
-                    // 更新加载提示以显示进度
                     if (statusH3) {
-                        statusH3.textContent = `🔄 正在搜索，请稍候... (${currentPage}/${totalPagesToFetch})`;
+                        statusH3.textContent = `🔄 正在搜索地点列表... (${currentPage}/${totalPagesToFetch})`;
                     }
 
                     const currentParams = {
@@ -1187,8 +1467,12 @@
                         await sleep(150);
                     }
                 }
+                
+                // --- 步骤 2 & 3: 处理和展示最终数据 (详情已在步骤1获取) ---
+                if (statusH3) {
+                    statusH3.textContent = `✅ 搜索完成，正在处理数据...`;
+                }
 
-                // 修正页码显示Bug
                 let pagesToDisplay = lastFetchedPage;
                 if (pois.length === 0 && lastFetchedPage > 0) {
                     pagesToDisplay = lastFetchedPage - 1;
@@ -1218,7 +1502,6 @@
                 };
                 searchCache[cacheKey] = dataToCache;
                 
-                // 首次加载时，打印原始数据
                 displayResults(aggregatedData, pagesToDisplay, initialPoisToDisplay, rawFetchedCount, isPoiTypeSearch, false);
 
             } catch (error) {
@@ -1341,8 +1624,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <h3 style="margin: 0;">📍 地点列表</h3>
                             <div class="sort-buttons">
+                                <button onclick="toggleComprehensiveSort()" data-sort="comprehensive" title="点击切换综合排序模式" style="font-size: 13px; padding: 5px 12px; margin-top: 0; min-width: 90px; text-align: center;">性价比综合</button>
                                 <button onclick="applySort('rating')" data-sort="rating" title="点击按好评度排序" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">好评优先</button>
-                                <button onclick="toggleComprehensiveSort()" data-sort="comprehensive" title="点击切换综合排序模式" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">性价比综合</button>
                                 <button onclick="applySort('distance')" data-sort="distance" title="点击按距离排序" style="font-size: 13px; padding: 5px 12px; margin-top: 0; margin-left: 5px;">距离优先</button>
                             </div>
                         </div>
@@ -1390,6 +1673,40 @@
             resultsContainer.style.minHeight = '';
         }
         
+        /**
+         * 渲染所有地点的图片墙
+         */
+        function renderPhotoGallery(pois) {
+            const gallerySection = document.getElementById('photo-gallery-section');
+            const galleryGrid = document.getElementById('photo-gallery-grid');
+            if (!gallerySection || !galleryGrid) return;
+
+            const poisWithPhotos = pois.filter(p => p.photos && p.photos.length > 0);
+
+            if (poisWithPhotos.length === 0) {
+                gallerySection.style.display = 'block';
+                galleryGrid.innerHTML = '<p style="color: #666;">本次搜索的所有地点均未找到官方图片。</p>';
+                return;
+            }
+            
+            let galleryHtml = '';
+            poisWithPhotos.forEach(poi => {
+                // 每个地点只取第一张图放入画廊
+                const photo = poi.photos[0];
+                galleryHtml += `
+                    <div class="gallery-item">
+                        <a href="${photo.url}" target="_blank" title="点击查看大图: ${poi.name}">
+                            <img src="${photo.url}" alt="${poi.name}" loading="lazy">
+                            <div class="poi-name-overlay">${poi.name}</div>
+                        </a>
+                    </div>
+                `;
+            });
+            
+            galleryGrid.innerHTML = galleryHtml;
+            gallerySection.style.display = 'block';
+        }
+
         /**
          * 如果需要，则平滑滚动到结果区域
          */
@@ -1497,6 +1814,193 @@
             scrollTopBtn.addEventListener('click', function() {
                 window.scrollTo({top: 0, behavior: 'smooth'});
             });
+
+            // ===== Lightbox (Image Gallery) Logic =====
+            const lightbox = document.getElementById('lightbox');
+            const lightboxContent = lightbox.querySelector('.lightbox-content');
+            const lightboxCaption = lightbox.querySelector('.lightbox-caption');
+            const closeBtn = lightbox.querySelector('.lightbox-close');
+            const prevBtn = lightbox.querySelector('.lightbox-prev');
+            const nextBtn = lightbox.querySelector('.lightbox-next');
+
+            function openLightbox(photos, poiId) {
+                if (!lightbox || !photos || photos.length === 0) return;
+                currentPoiPhotos = photos;
+                currentPhotoIndex = 0;
+                lightbox.style.display = 'flex';
+                
+                lightboxContent.innerHTML = ''; // Clear previous images
+                
+                const img = document.createElement('img');
+                img.className = 'lightbox-image';
+                img.src = currentPoiPhotos[currentPhotoIndex].url;
+                lightboxContent.appendChild(img);
+                
+                lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
+
+                // Immediately try to fetch all photos for this POI
+                if (poiId) {
+                    fetchPoiDetails(poiId);
+                }
+            }
+
+            function closeLightbox() {
+                if (!lightbox) return;
+                lightbox.style.display = 'none';
+                lightboxContent.innerHTML = ''; // Clear images on close
+            }
+
+            async function fetchPoiDetails(poiId) {
+                const url = new URL(CONFIG.SCF_URL);
+                url.searchParams.set('apiPath', 'v5/place/detail');
+                url.searchParams.set('id', poiId);
+                url.searchParams.set('show_fields', 'photos');
+
+                try {
+                    const response = await fetch(url.toString());
+                    const data = await response.json();
+                    if (data.status === '1' && data.pois && data.pois.length > 0) {
+                        const detailPoi = data.pois[0];
+                        // If we got a more complete list of photos, update the gallery
+                        if (detailPoi.photos && detailPoi.photos.length > currentPoiPhotos.length) {
+                            currentPoiPhotos = detailPoi.photos;
+                            // Update the caption to reflect the new total
+                            lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch POI details:", error);
+                }
+            }
+
+            function showNextImage() {
+                if (isLightboxAnimating || currentPoiPhotos.length <= 1) return;
+                isLightboxAnimating = true;
+
+                const oldImg = lightboxContent.querySelector('.lightbox-image');
+                
+                currentPhotoIndex = (currentPhotoIndex + 1) % currentPoiPhotos.length;
+                const newImg = document.createElement('img');
+                newImg.className = 'lightbox-image';
+                newImg.src = currentPoiPhotos[currentPhotoIndex].url;
+                
+                // Position new image off-screen to the right without transition
+                newImg.style.transition = 'none';
+                newImg.style.transform = 'translateX(100%)';
+                lightboxContent.appendChild(newImg);
+
+                // Force browser to apply the initial transform before adding the transition
+                newImg.offsetHeight; 
+
+                // Add transitions and animate
+                newImg.style.transition = 'transform 0.4s ease-in-out';
+                newImg.style.transform = 'translateX(0)';
+                if (oldImg) {
+                    oldImg.style.transition = 'transform 0.4s ease-in-out';
+                    oldImg.style.transform = 'translateX(-100%)';
+                }
+                
+                lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
+
+                // Clean up after the new image has finished its transition
+                newImg.addEventListener('transitionend', () => {
+                    if (oldImg) oldImg.remove();
+                    isLightboxAnimating = false;
+                }, { once: true });
+            }
+            
+            function showPrevImage() {
+                if (isLightboxAnimating || currentPoiPhotos.length <= 1) return;
+                isLightboxAnimating = true;
+
+                const oldImg = lightboxContent.querySelector('.lightbox-image');
+
+                currentPhotoIndex = (currentPhotoIndex - 1 + currentPoiPhotos.length) % currentPoiPhotos.length;
+                const newImg = document.createElement('img');
+                newImg.className = 'lightbox-image';
+                newImg.src = currentPoiPhotos[currentPhotoIndex].url;
+                
+                // Position new image off-screen to the left without transition
+                newImg.style.transition = 'none';
+                newImg.style.transform = 'translateX(-100%)';
+                lightboxContent.appendChild(newImg);
+                
+                // Force reflow
+                newImg.offsetHeight; 
+
+                // Add transitions and animate
+                newImg.style.transition = 'transform 0.4s ease-in-out';
+                newImg.style.transform = 'translateX(0)';
+                if (oldImg) {
+                    oldImg.style.transition = 'transform 0.4s ease-in-out';
+                    oldImg.style.transform = 'translateX(100%)';
+                }
+
+                lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
+                
+                // Clean up
+                newImg.addEventListener('transitionend', () => {
+                    if (oldImg) oldImg.remove();
+                    isLightboxAnimating = false;
+                }, { once: true });
+            }
+
+            // Event listener for image clicks (delegated)
+            document.getElementById('results').addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('lightbox-trigger')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const photosJson = e.target.getAttribute('data-photos');
+                    const poiId = e.target.getAttribute('data-poi-id');
+                    if (photosJson) {
+                        try {
+                           const photos = JSON.parse(photosJson);
+                           openLightbox(photos, poiId);
+                        } catch (err) {
+                           console.error("Failed to parse photos JSON:", err);
+                        }
+                    }
+                }
+            });
+
+            // Lightbox control listeners
+            closeBtn.addEventListener('click', closeLightbox);
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showNextImage();
+            });
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showPrevImage();
+            });
+            // Close lightbox if clicking on the overlay
+            lightbox.addEventListener('click', function(e) {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+
+            // Swipe functionality for mobile
+            let touchstartX = 0;
+            let touchendX = 0;
+
+            lightbox.addEventListener('touchstart', function(event) {
+                touchstartX = event.changedTouches[0].screenX;
+            }, false);
+
+            lightbox.addEventListener('touchend', function(event) {
+                touchendX = event.changedTouches[0].screenX;
+                handleSwipeGesture();
+            }, false);
+
+            function handleSwipeGesture() {
+                if (touchendX < touchstartX - 50) { // Swiped left
+                    showNextImage();
+                }
+                if (touchendX > touchstartX + 50) { // Swiped right
+                    showPrevImage();
+                }
+            }
         });
     </script>
 </body>
