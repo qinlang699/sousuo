@@ -171,16 +171,12 @@
             border-radius: 4px;
             border-left: 4px solid #1890ff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 添加立体阴影 */
-            transition: box-shadow 0.3s ease, transform 0.3s ease; /* 添加过渡效果 */
+            /* transition: box-shadow 0.3s ease, transform 0.3s ease; -- Animation removed as requested */
             position: relative; /* 为绝对定位的子元素提供容器 */
         }
         
         .poi-item:hover {
-            transform: translateY(-2px); /* 悬浮时轻微上移 */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬浮时阴影更明显 */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: opacity 0.3s ease;
+            /* All hover animations removed */
         }
         
         .poi-link {
@@ -215,6 +211,37 @@
             margin-bottom: 2px; /* Small gap between lines */
         }
         
+        /* New styles for the address button and its popover */
+        .address-btn {
+            background: #1890ff;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+        .address-btn:hover {
+            background: #40a9ff;
+            color: white;
+        }
+        .address-popover {
+            position: fixed; /* Use fixed to position relative to viewport */
+            background-color: #333;
+            color: white;
+            border-radius: 6px;
+            padding: 10px 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1010; /* Above everything */
+            max-width: 80vw;
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
         .poi-info-label {
             flex-shrink: 0;
             white-space: nowrap;
@@ -607,6 +634,7 @@
             cursor: pointer;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: none; /* Prevent swipe-to-navigate gestures */
         }
 
         .lightbox-content {
@@ -624,7 +652,8 @@
             height: 100%;
             object-fit: contain;
             border-radius: 5px;
-            /* Animation is now handled by JS with transitions */
+            /* Force hardware acceleration to fix animation flickering/artifacts */
+            transform: translateZ(0);
         }
 
         .lightbox-close {
@@ -820,6 +849,7 @@
         let currentPoiPhotos = []; // Holds photos for the currently viewed POI
         let currentPhotoIndex = 0; // Index of the photo shown in the lightbox
         let isLightboxAnimating = false; // Animation lock
+        const preventNavSwipe = (e) => e.preventDefault(); // For mobile swipe fix
 
         const CONFIG = {
             // SCF_URL 已替换为您提供的云函数地址
@@ -1125,7 +1155,9 @@
                     photoHtml = `<img src="${firstPhotoUrl}" class="poi-item-photo lightbox-trigger" alt="${poi.name}" loading="lazy" data-photos="${photosJson}" data-poi-id="${poi.id}" title="点击预览 ${poi.photos.length} 张图片">`;
                 }
 
-                let infoHtml = `<div class="poi-info-line">📍 详细地址: ${buildFullAddress(poi)}</div>`;
+                const fullAddress = buildFullAddress(poi);
+                const escapedAddress = fullAddress.replace(/"/g, '&quot;');
+                let infoHtml = `<div class="poi-info-line"><button class="address-btn" data-address="${escapedAddress}"> 详细地址 </button></div>`;
                 infoHtml += `<div class="poi-info-line">📞 电话: ${formatPhoneNumber(poi.business?.tel)}</div>`;
                 infoHtml += `<div class="poi-info-line">🏷️ 类型: ${displayType}</div>`;
                 infoHtml += `<div class="poi-info-line">📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}</div>`;
@@ -1166,10 +1198,18 @@
             const locationParts = poi.location.split(',');
             const lon = locationParts[0];
             const lat = locationParts[1];
-            
-            // 使用高德地图官方推荐的统一URI API，它会自动处理PC和移动端
-            // 这比自己检测UA更可靠，能从根本上解决跳转问题
-            return `https://uri.amap.com/marker?position=${lon},${lat}&name=${poiName}&src=mypage&coordinate=gaode&callnative=1`;
+            const deviceType = getDeviceType();
+
+            switch (deviceType) {
+                case 'ios':
+                    return `iosamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
+                case 'android':
+                    return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
+                case 'pc':
+                default:
+                    // Use the reliable POI ID link for desktops
+                    return `https://www.amap.com/place/${poi.id}`;
+            }
         }
         
         /**
@@ -1824,6 +1864,10 @@
             const nextBtn = lightbox.querySelector('.lightbox-next');
 
             function openLightbox(photos, poiId) {
+                // Ensure any open popover is closed first
+                const existingPopover = document.querySelector('.address-popover');
+                if (existingPopover) existingPopover.remove();
+
                 if (!lightbox || !photos || photos.length === 0) return;
                 currentPoiPhotos = photos;
                 currentPhotoIndex = 0;
@@ -1961,7 +2005,49 @@
                         }
                     }
                 }
+
+                if (e.target && e.target.classList.contains('address-btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    createAddressPopover(e.target);
+                }
             });
+
+            function createAddressPopover(button) {
+                // Remove any previously created popover immediately
+                const oldPopover = document.querySelector('.address-popover');
+                if (oldPopover) oldPopover.remove();
+
+                // Ensure lightbox is closed
+                if (lightbox.style.display !== 'none') {
+                    closeLightbox();
+                }
+
+                const address = button.dataset.address;
+                const popover = document.createElement('div');
+                popover.className = 'address-popover';
+                popover.textContent = address;
+
+                // Stop the popover from closing when clicking inside it
+                popover.addEventListener('click', e => e.stopPropagation());
+                
+                document.body.appendChild(popover);
+
+                // Position it
+                const btnRect = button.getBoundingClientRect();
+                let top = btnRect.bottom + 8;
+                let left = btnRect.left;
+                
+                popover.style.top = `${top}px`;
+                popover.style.left = `${left}px`;
+
+                // Add one-time listeners to close the popover on the next click OR scroll
+                setTimeout(() => {
+                    const closePopover = () => popover.remove();
+                    document.addEventListener('click', closePopover, { once: true });
+                    window.addEventListener('scroll', closePopover, { once: true });
+                }, 0);
+            }
 
             // Lightbox control listeners
             closeBtn.addEventListener('click', closeLightbox);
@@ -2002,6 +2088,21 @@
                 }
             }
         });
+
+        /**
+         * Detects the type of device based on user agent.
+         * @returns {'ios' | 'android' | 'pc'}
+         */
+        function getDeviceType() {
+            const ua = navigator.userAgent.toLowerCase();
+            if (/iphone|ipad|ipod/.test(ua)) {
+                return 'ios';
+            }
+            if (/android/.test(ua)) {
+                return 'android';
+            }
+            return 'pc';
+        }
     </script>
 </body>
 </html>
