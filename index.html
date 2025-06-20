@@ -150,10 +150,17 @@
             cursor: pointer;
             font-size: 16px;
             margin-top: 10px;
+            transition: background-color 0.2s, transform 0.05s ease-out;
         }
         
         button:hover {
             background: #40a9ff;
+        }
+        
+        button:active {
+            background: #096dd9;
+            transform: translateY(1px);
+            transition: none;
         }
         
         button:disabled {
@@ -244,10 +251,16 @@
             position: relative;
             top: -6px;
             left: 10px;
+            transition: background-color 0.2s, transform 0.05s ease-out;
         }
         .address-btn:hover {
             background: #40a9ff;
             color: white;
+        }
+        .address-btn:active {
+            background: #096dd9;
+            transform: translateY(1px);
+            transition: none;
         }
         .address-popover {
             position: fixed; /* Use fixed to position relative to viewport */
@@ -262,6 +275,19 @@
             line-height: 1.5;
             user-select: all;
             -webkit-user-select: all;
+        }
+
+        .location-choice {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+        .location-choice:hover {
+            background: #e9e9e9;
+            border-color: #ccc;
         }
 
         .poi-info-label {
@@ -558,10 +584,16 @@
             align-items: center;
             flex: 1; /* Each button takes half the available height */
             line-height: 0;
-            transition: background-color 0.3s;
+            transition: background-color 0.2s, transform 0.05s ease-out;
         }
         .stepper-btn:hover {
             background-color: #40a9ff;
+        }
+        
+        .stepper-btn:active {
+            background-color: #096dd9;
+            transform: translateY(1px);
+            transition: none;
         }
         
         #increaseBtn {
@@ -832,7 +864,7 @@
         <div class="search-form">
             <div class="form-group">
                 <label for="locationKeyword">1. 输入中心点关键字:</label>
-                <input type="text" id="locationKeyword" placeholder="例如：北京万达" value="王府井大街">
+                <input type="text" id="locationKeyword" placeholder="例如：北京万达" value="北京天坛公园">
             </div>
             <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -932,6 +964,38 @@
             cost_effective: [],
             high_end: []
         };
+        let locationChoices = []; // 新增: 用于存储多个中心点选项
+        let lastLocationKeyword = ''; // 新增: 用于跟踪上一次的中心点关键字
+        const CHINESE_CITIES = [
+            '北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区',
+            '哈尔滨市', '齐齐哈尔市', '鸡西市', '鹤岗市', '双鸭山市', '大庆市', '伊春市', '佳木斯市', '七台河市', '牡丹江市', '黑河市', '绥化市', '大兴安岭地区',
+            '长春市', '吉林市', '四平市', '辽源市', '通化市', '白山市', '松原市', '白城市', '延边朝鲜族自治州',
+            '沈阳市', '大连市', '鞍山市', '抚顺市', '本溪市', '丹东市', '锦州市', '营口市', '阜新市', '辽阳市', '盘锦市', '铁岭市', '朝阳市', '葫芦岛市',
+            '石家庄市', '唐山市', '秦皇岛市', '邯郸市', '邢台市', '保定市', '张家口市', '承德市', '沧州市', '廊坊市', '衡水市',
+            '太原市', '大同市', '阳泉市', '长治市', '晋城市', '朔州市', '晋中市', '运城市', '忻州市', '临汾市', '吕梁市',
+            '呼和浩特市', '包头市', '乌海市', '赤峰市', '通辽市', '鄂尔多斯市', '呼伦贝尔市', '巴彦淖尔市', '乌兰察布市', '兴安盟', '锡林郭勒盟', '阿拉善盟',
+            '南京市', '无锡市', '徐州市', '常州市', '苏州市', '南通市', '连云港市', '淮安市', '盐城市', '扬州市', '镇江市', '泰州市', '宿迁市',
+            '杭州市', '宁波市', '温州市', '嘉兴市', '湖州市', '绍兴市', '金华市', '衢州市', '舟山市', '台州市', '丽水市',
+            '合肥市', '芜湖市', '蚌埠市', '淮南市', '马鞍山市', '淮北市', '铜陵市', '安庆市', '黄山市', '滁州市', '阜阳市', '宿州市', '六安市', '亳州市', '池州市', '宣城市',
+            '福州市', '厦门市', '莆田市', '三明市', '泉州市', '漳州市', '南平市', '龙岩市', '宁德市',
+            '南昌市', '景德镇市', '萍乡市', '九江市', '新余市', '鹰潭市', '赣州市', '吉安市', '宜春市', '抚州市', '上饶市',
+            '济南市', '青岛市', '淄博市', '枣庄市', '东营市', '烟台市', '潍坊市', '济宁市', '泰安市', '威海市', '日照市', '临沂市', '德州市', '聊城市', '滨州市', '菏泽市',
+            '郑州市', '开封市', '洛阳市', '平顶山市', '安阳市', '鹤壁市', '新乡市', '焦作市', '濮阳市', '许昌市', '漯河市', '三门峡市', '南阳市', '商丘市', '信阳市', '周口市', '驻马店市',
+            '武汉市', '黄石市', '十堰市', '宜昌市', '襄阳市', '鄂州市', '荆门市', '孝感市', '荆州市', '黄冈市', '咸宁市', '随州市', '恩施土家族苗族自治州',
+            '长沙市', '株洲市', '湘潭市', '衡阳市', '邵阳市', '岳阳市', '常德市', '张家界市', '益阳市', '郴州市', '永州市', '怀化市', '娄底市', '湘西土家族苗族自治州',
+            '广州市', '韶关市', '深圳市', '珠海市', '汕头市', '佛山市', '江门市', '湛江市', '茂名市', '肇庆市', '惠州市', '梅州市', '汕尾市', '河源市', '阳江市', '清远市', '东莞市', '中山市', '潮州市', '揭阳市', '云浮市',
+            '南宁市', '柳州市', '桂林市', '梧州市', '北海市', '防城港市', '钦州市', '贵港市', '玉林市', '百色市', '贺州市', '河池市', '来宾市', '崇左市',
+            '海口市', '三亚市', '三沙市', '儋州市',
+            '成都市', '自贡市', '攀枝花市', '泸州市', '德阳市', '绵阳市', '广元市', '遂宁市', '内江市', '乐山市', '南充市', '眉山市', '宜宾市', '广安市', '达州市', '雅安市', '巴中市', '资阳市', '阿坝藏族羌族自治州', '甘孜藏族自治州', '凉山彝族自治州',
+            '贵阳市', '六盘水市', '遵义市', '安顺市', '毕节市', '铜仁市', '黔西南布依族苗族自治州', '黔东南苗族侗族自治州', '黔南布依族苗族自治州',
+            '昆明市', '曲靖市', '玉溪市', '保山市', '昭通市', '丽江市', '普洱市', '临沧市', '楚雄彝族自治州', '红河哈尼族彝族自治州', '文山壮族苗族自治州', '西双版纳傣族自治州', '大理白族自治州', '德宏傣族景颇族自治州', '怒江傈僳族自治州', '迪庆藏族自治州',
+            '拉萨市', '日喀则市', '昌都市', '林芝市', '山南市', '那曲市', '阿里地区',
+            '西安市', '铜川市', '宝鸡市', '咸阳市', '渭南市', '延安市', '汉中市', '榆林市', '安康市', '商洛市',
+            '兰州市', '嘉峪关市', '金昌市', '白银市', '天水市', '武威市', '张掖市', '平凉市', '酒泉市', '庆阳市', '定西市', '陇南市', '临夏回族自治州', '甘南藏族自治州',
+            '西宁市', '海东市', '海北藏族自治州', '黄南藏族自治州', '海南藏族自治州', '果洛藏族自治州', '玉树藏族自治州', '海西蒙古族藏族自治州',
+            '银川市', '石嘴山市', '吴忠市', '固原市', '中卫市',
+            '乌鲁木齐市', '克拉玛依市', '吐鲁番市', '哈密市', '昌吉回族自治州', '博尔塔拉蒙古自治州', '巴音郭楞蒙古自治州', '阿克苏地区', '克孜勒苏柯尔克孜自治州', '喀什地区', '和田地区', '伊犁哈萨克自治州', '塔城地区', '阿勒泰地区'
+        ];
         let allPoiPhotos = [];
         let currentLightboxIndex = 0;
         let currentPoiPhotos = []; // Holds photos for the currently viewed POI
@@ -1429,6 +1493,56 @@
             const statusDiv = document.getElementById('locationStatus');
             statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong>中心点:</strong> ${poi.name}<br><strong>详细地址:</strong> ${fullAddress}</div>`;
             document.getElementById('nearby-search-section').style.display = 'block';
+            
+            // 成功处理后，更新"上一次的关键字"
+            lastLocationKeyword = document.getElementById('locationKeyword').value.trim();
+        }
+
+        /**
+         * 渲染多个中心点选项
+         * @param {Array<object>} pois - POI数组
+         * @param {boolean} recommendCity - 是否显示推荐输入城市的提示
+         */
+        function renderLocationChoices(pois, recommendCity = false) {
+            locationChoices = pois;
+            const statusDiv = document.getElementById('locationStatus');
+            const recommendationText = recommendCity ? '<br>(推荐先输入城市名)' : '';
+            let choicesHtml = `<div class="success">请选择以下坐标中的一个:${recommendationText}</div>`;
+            
+            pois.forEach((poi, index) => {
+                const fullAddress = buildFullAddress(poi);
+                choicesHtml += `
+                    <div class="location-choice" onclick="selectLocation(${index})">
+                        <strong>${poi.name}</strong><br>
+                        <small>${fullAddress}</small>
+                    </div>
+                `;
+            });
+            
+            statusDiv.innerHTML = choicesHtml;
+            document.getElementById('nearby-search-section').style.display = 'none'; // Ensure this is hidden
+        }
+
+        /**
+         * 从多个选项中选择一个中心点
+         * @param {number} index - 所选POI在locationChoices数组中的索引
+         */
+        function selectLocation(index) {
+            const selectedPoi = locationChoices[index];
+            
+            // 更新输入框为所选的地名
+            document.getElementById('locationKeyword').value = selectedPoi.name;
+
+            // 清理选项并处理所选的POI
+            locationChoices = [];
+            processLocationPoi(selectedPoi, false);
+            
+            // 使用新的、明确的地名作为键来缓存选择
+            // cityMatch is true here because a specific choice has been made.
+            locationCache[selectedPoi.name] = { pois: [selectedPoi], cityMatch: true };
+            
+            // 成功选择后，同样更新"上一次的关键字"
+            lastLocationKeyword = selectedPoi.name;
         }
 
         /**
@@ -1445,17 +1559,34 @@
             const searchBtn = document.getElementById('searchLocationBtn');
             const nearbySection = document.getElementById('nearby-search-section');
             
-            // Invalidate cache and clear previous results
-            originalDistanceSortedPois = []; 
-            searchCache = {}; // 清空周边搜索缓存
-            cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
-            document.getElementById('results').innerHTML = ''; 
-            nearbySection.style.display = 'none'; // 修改中心点时隐藏下方内容
+            // 只有当关键字改变时，才清空结果和缓存
+            if (locationKeyword !== lastLocationKeyword) {
+                originalDistanceSortedPois = []; 
+                searchCache = {}; // 清空周边搜索缓存
+                cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
+                document.getElementById('results').innerHTML = ''; 
+                nearbySection.style.display = 'none'; // 修改中心点时隐藏下方内容
+            }
 
             // 检查中心点缓存
             if (locationCache[locationKeyword]) {
                 try {
-                    processLocationPoi(locationCache[locationKeyword], true);
+                    const cachedResult = locationCache[locationKeyword];
+                    
+                    if (cachedResult && cachedResult.pois) {
+                        const pois = cachedResult.pois;
+                        const recommendCity = !cachedResult.cityMatch;
+
+                        if (pois.length > 1) {
+                            renderLocationChoices(pois, recommendCity);
+                        } else if (pois.length === 1) {
+                            processLocationPoi(pois[0], true);
+                        } else {
+                            statusDiv.innerHTML = `<div class="error">没有找到满足您要求的坐标</div>`;
+                        }
+                    } else {
+                        throw new Error("Invalid cache format.");
+                    }
                 } catch (error) {
                     statusDiv.innerHTML = `<div class="error">缓存数据处理失败: ${error.message}</div>`;
                     delete locationCache[locationKeyword]; // 移除错误的缓存
@@ -1467,24 +1598,53 @@
             searchBtn.textContent = '🔄 搜索中...';
             statusDiv.innerHTML = `<div class="loading">正在通过关键字获取坐标...</div>`;
             
+            let matchedCity = '';
+            for (const city of CHINESE_CITIES) {
+                const cityName = city.replace(/市|省|自治区|特别行政区/, '');
+                if (locationKeyword.includes(cityName) && cityName) {
+                    matchedCity = city;
+                    break;
+                }
+            }
+            
             const url = new URL(CONFIG.SCF_URL);
             url.searchParams.set('apiPath', 'v5/place/text'); 
             url.searchParams.set('keywords', locationKeyword);
-            url.searchParams.set('page_size', '1');
             url.searchParams.set('page_num', '1');
+            url.searchParams.set('page_size', '5'); // Always fetch up to 5 results
+
+            if (matchedCity) {
+                url.searchParams.set('region', matchedCity);
+            }
 
             locationSearchUrl = url.toString(); // 保存URL
 
             try {
                 const response = await fetch(url.toString());
                 const data = await response.json();
+                let poisToProcess = (data.status === '1' && data.pois) ? data.pois : [];
 
-                if (data.status === '1' && data.pois && data.pois.length > 0) {
-                    const poi = data.pois[0];
-                    locationCache[locationKeyword] = poi; // 将成功的结果存入缓存
-                    processLocationPoi(poi, false);
+                // If a city was matched, strictly filter results on the client-side
+                if (matchedCity && poisToProcess.length > 0) {
+                    const targetCityName = matchedCity.replace(/市|省|自治区|特别行政区/, '');
+                    poisToProcess = poisToProcess.filter(poi => {
+                        return poi.cityname && poi.cityname.includes(targetCityName);
+                    });
+                }
+
+                if (poisToProcess.length > 0) {
+                    // Cache the result along with whether a city was matched
+                    locationCache[locationKeyword] = { pois: poisToProcess, cityMatch: !!matchedCity };
+
+                    if (poisToProcess.length > 1) {
+                        // Pass a flag to recommend entering city if no city was matched
+                        renderLocationChoices(poisToProcess, !matchedCity);
+                    } else {
+                        // Only one result, process it directly
+                        processLocationPoi(poisToProcess[0], false);
+                    }
                 } else {
-                     throw new Error(data.info || '未能找到匹配的地点。');
+                    statusDiv.innerHTML = `<div class="error">没有找到满足您要求的坐标</div>`;
                 }
             } catch (error) {
                 console.error('❌ 中心点搜索失败:', error);
@@ -1900,6 +2060,7 @@
             locationKeywordInput.addEventListener('input', function() {
                 document.getElementById('nearby-search-section').style.display = 'none';
                 document.getElementById('locationStatus').innerHTML = ''; // 同时清除旧的状态信息
+                document.getElementById('results').innerHTML = ''; // 新增: 清空地点列表结果
             });
             
             // 为"生成数量"输入框添加事件监听，自动校准为非负数
