@@ -1257,7 +1257,7 @@
 
                 let infoHtml = `<div class="poi-info-line"><button class="address-btn" data-address="${escapedAddress}"> 详细地址 </button></div>`;
                 infoHtml += createInfoLine('📞电话:', formatPhoneNumber(poi.business?.tel));
-                infoHtml += createInfoLine('🍴类型:', displayType);
+                infoHtml += createInfoLine('🏠类型:', displayType);
                 infoHtml += createInfoLine('📏直线距离:', poi.distance ? poi.distance + '米' : '距离未知');
                 
                 if (poi.business_area) {
