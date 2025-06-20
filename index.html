@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高德地图周边搜索A</title>
+    <title>高德地图周边搜索</title>
     <style>
         /* For Webkit browsers (Chrome, Safari, Edge) */
         ::-webkit-scrollbar {
@@ -24,6 +24,22 @@
             scrollbar-width: auto; /* 'auto' or 'thin' */
             scrollbar-color: #a9a9a9 #f1f1f1; /* thumb and track color */
             overflow-y: scroll; /* 始终显示滚动条，防止页面内容变化时宽度抖动 */
+            -webkit-overflow-scrolling: touch; /* 为移动设备添加全局惯性滚动 */
+        }
+        
+        * {
+            -webkit-tap-highlight-color: transparent !important;
+            outline: none !important;
+        }
+        
+        :root {
+            /*
+             * @variable --lightbox-edge-area-size
+             * 控制全屏图片查看器边缘可关闭区域的大小。
+             * - 在手机竖屏等窄屏模式下，它定义了上下关闭栏的高度。
+             * - 在电脑或手机横屏等宽屏模式下，它定义了左右关闭栏的宽度。
+             */
+            --lightbox-edge-area-size: 80px;
         }
         
         body {
@@ -150,6 +166,7 @@
             margin-top: 20px;
             flex: 1; /* 填充剩余空间 */
             overflow-y: auto; /* 如果内容溢出，则显示滚动条 */
+            -webkit-overflow-scrolling: touch; /* 为iOS设备添加惯性滚动 */
         }
         
         .result-section {
@@ -206,8 +223,10 @@
         
         /* Reverted the previous attempt and using hanging indent */
         .poi-info-line {
-            padding-left: 1.7em; /* Indent for icon+space, adjusted for alignment */
-            text-indent: -1.7em; /* Outdent first line to pull the icon back */
+            display: flex;
+            align-items: flex-start;
+            /* padding-left: 1.7em; -- Replaced by flexbox */
+            /* text-indent: -1.7em; -- Replaced by flexbox */
             margin-bottom: 2px; /* Small gap between lines */
         }
         
@@ -222,6 +241,9 @@
             text-decoration: none;
             font-size: 13px;
             line-height: 1.3;
+            position: relative;
+            top: -6px;
+            left: 10px;
         }
         .address-btn:hover {
             background: #40a9ff;
@@ -238,8 +260,8 @@
             max-width: 80vw;
             font-size: 14px;
             line-height: 1.5;
-            user-select: text;
-            -webkit-user-select: text;
+            user-select: all;
+            -webkit-user-select: all;
         }
 
         .poi-info-label {
@@ -473,6 +495,28 @@
             .category-row:nth-child(2) {
                 grid-template-columns: repeat(9, 1fr); /* 第二行9列 */
             }
+
+            /* Reposition lightbox close areas for desktop/landscape */
+            .lightbox-close {
+                top: 0;
+                right: 0;
+                left: auto;
+                width: var(--lightbox-edge-area-size);
+                height: 100%;
+                padding: 20px 0; /* Adjust padding for vertical alignment */
+                /* Use flexbox to better control the 'x' position */
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+            }
+
+            .lightbox-bottom-close {
+                top: 0;
+                left: 0;
+                bottom: auto; /* Unset bottom positioning */
+                width: var(--lightbox-edge-area-size);
+                height: 100%;
+            }
         }
 
         /* Styles for stepper buttons */
@@ -623,25 +667,24 @@
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            width: auto; /* Let left/right determine width */
+            width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            cursor: pointer;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: none; /* Prevent swipe-to-navigate gestures */
+            touch-action: none;
         }
 
         .lightbox-content {
             position: relative;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Crucial for the slide animation */
+            overflow: hidden;
+            z-index: 1010; /* Base layer for the image */
         }
 
         .lightbox-image {
@@ -652,20 +695,27 @@
             height: 100%;
             object-fit: contain;
             border-radius: 5px;
-            /* Force hardware acceleration to fix animation flickering/artifacts */
             transform: translateZ(0);
+        }
+        
+        /* Shared styles for close areas */
+        .lightbox-close, .lightbox-bottom-close {
+            position: absolute;
+            cursor: pointer;
+            display: flex;
         }
 
         .lightbox-close {
-            position: absolute;
-            top: 15px;
-            right: 35px;
+            box-sizing: border-box;
             color: #fff;
             font-size: 40px;
             font-weight: bold;
             transition: 0.3s;
-            cursor: pointer;
-            z-index: 1001;
+            z-index: 1020; /* Action layer, below arrows */
+        }
+        
+        .lightbox-bottom-close {
+            z-index: 1020; /* Action layer, same as top close */
         }
 
         .lightbox-close:hover,
@@ -686,20 +736,19 @@
             transition: 0.6s ease;
             border-radius: 0 3px 3px 0;
             background-color: rgba(0,0,0,0.3);
-            /* Arrows are now visible by default on desktop */
-            z-index: 1002; /* Ensure they are above the content */
-        }
-
-        .lightbox-prev {
-            left: 15px; /* Adjust position */
-        }
-
-        .lightbox-next {
-            right: 15px; /* Adjust position */
+            z-index: 1030; /* Top-most interactive layer */
         }
 
         .lightbox-prev:hover, .lightbox-next:hover {
             background-color: rgba(0,0,0,0.8);
+        }
+        
+        .lightbox-prev {
+            left: 15px;
+        }
+
+        .lightbox-next {
+            right: 15px;
         }
 
         .lightbox-caption {
@@ -710,30 +759,68 @@
             bottom: 15px;
             width: 100%;
             font-size: 16px;
+            z-index: 1035; /* Info layer, above image, below actions. Increased to be on top of everything. */
+            pointer-events: none; /* Make caption unclickable, clicks pass through */
         }
 
+        /* Mobile-first layout: Top and bottom bars */
         @media (max-width: 768px) {
-            /* ... existing mobile styles ... */
+            .lightbox-close {
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: var(--lightbox-edge-area-size);
+                padding: 0 35px;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            .lightbox-bottom-close {
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: var(--lightbox-edge-area-size);
+            }
             .lightbox-prev, .lightbox-next {
-                display: none; /* Hide arrows on mobile to favor swiping */
+                display: none;
             }
         }
 
+        /* Desktop/landscape layout: Left and right bars */
+        @media (min-width: 769px) {
+            .lightbox-close {
+                top: 0;
+                right: 0;
+                left: auto;
+                width: var(--lightbox-edge-area-size);
+                height: 100%;
+                padding: 20px 0;
+                align-items: flex-start;
+                justify-content: center;
+            }
+            .lightbox-bottom-close {
+                top: 0;
+                left: 0;
+                bottom: auto;
+                width: var(--lightbox-edge-area-size);
+                height: 100%;
+            }
+        }
+    
         @keyframes slide-in-from-right {
-            from { transform: translateX(110%); } /* Start slightly off-screen */
+            from { transform: translateX(110%); }
             to { transform: translateX(0); }
         }
         @keyframes slide-out-to-left {
             from { transform: translateX(0); }
-            to { transform: translateX(-110%); } /* End slightly off-screen */
+            to { transform: translateX(-110%); }
         }
         @keyframes slide-in-from-left {
-            from { transform: translateX(-110%); } /* Start slightly off-screen */
+            from { transform: translateX(-110%); }
             to { transform: translateX(0); }
         }
         @keyframes slide-out-to-right {
             from { transform: translateX(0); }
-            to { transform: translateX(110%); } /* End slightly off-screen */
+            to { transform: translateX(110%); }
         }
     </style>
 </head>
@@ -745,7 +832,7 @@
         <div class="search-form">
             <div class="form-group">
                 <label for="locationKeyword">1. 输入中心点关键字:</label>
-                <input type="text" id="locationKeyword" placeholder="例如：杭州万达" value="环球影城">
+                <input type="text" id="locationKeyword" placeholder="例如：北京万达" value="王府井大街">
             </div>
             <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -826,6 +913,7 @@
         <a class="lightbox-prev">&#10094;</a>
         <a class="lightbox-next">&#10095;</a>
         <div class="lightbox-caption"></div>
+        <div class="lightbox-bottom-close"></div>
     </div>
 
     <a id="scrollTopBtn" title="回到顶部">▲</a>
@@ -1157,19 +1245,29 @@
 
                 const fullAddress = buildFullAddress(poi);
                 const escapedAddress = fullAddress.replace(/"/g, '&quot;');
+
+                // Helper to create consistently styled info lines
+                const createInfoLine = (label, value) => {
+                    if (!value || value.toString().trim() === '' || value === '暂无电话') return '';
+                    return `<div class="poi-info-line">
+                                <span class="poi-info-label">${label}</span>
+                                <span class="poi-info-value">${value}</span>
+                            </div>`;
+                };
+
                 let infoHtml = `<div class="poi-info-line"><button class="address-btn" data-address="${escapedAddress}"> 详细地址 </button></div>`;
-                infoHtml += `<div class="poi-info-line">📞 电话: ${formatPhoneNumber(poi.business?.tel)}</div>`;
-                infoHtml += `<div class="poi-info-line">🏷️ 类型: ${displayType}</div>`;
-                infoHtml += `<div class="poi-info-line">📏 直线距离: ${poi.distance ? poi.distance + '米' : '距离未知'}</div>`;
+                infoHtml += createInfoLine('📞电话:', formatPhoneNumber(poi.business?.tel));
+                infoHtml += createInfoLine('🏦类型:', displayType);
+                infoHtml += createInfoLine('📏直线距离:', poi.distance ? poi.distance + '米' : '距离未知');
                 
                 if (poi.business_area) {
-                    infoHtml += `<div class="poi-info-line">🏢 商圈: ${poi.business_area}</div>`;
+                    infoHtml += createInfoLine('🏢商圈:', poi.business_area);
                 }
                 if (poi.business?.rating && parseFloat(poi.business.rating) > 0) {
-                    infoHtml += `<div class="poi-info-line">⭐ 评分: ${poi.business.rating}</div>`;
+                    infoHtml += createInfoLine('⭐评分:', poi.business.rating);
                 }
                 if (poi.business?.cost) {
-                    infoHtml += `<div class="poi-info-line">💰 人均: ${poi.business.cost}元</div>`;
+                    infoHtml += createInfoLine('💰人均:', poi.business.cost + '元');
                 }
                 
                 html += `
@@ -1259,7 +1357,8 @@
                 return '暂无电话';
             }
 
-            return uniqueNumbers.join('<br>');
+            // Wrap each number in a span to prevent it from breaking midway
+            return uniqueNumbers.map(n => `<span style="white-space: nowrap;">${n}</span>`).join('<br>');
         }
         
         /**
@@ -1862,6 +1961,7 @@
             const closeBtn = lightbox.querySelector('.lightbox-close');
             const prevBtn = lightbox.querySelector('.lightbox-prev');
             const nextBtn = lightbox.querySelector('.lightbox-next');
+            const bottomCloseBtn = lightbox.querySelector('.lightbox-bottom-close');
 
             function openLightbox(photos, poiId) {
                 // Ensure any open popover is closed first
@@ -1890,6 +1990,22 @@
 
             function closeLightbox() {
                 if (!lightbox) return;
+                // If an animation is in progress, stop it and reset state immediately
+                if (isLightboxAnimating) {
+                    const images = lightboxContent.querySelectorAll('.lightbox-image');
+                    images.forEach(img => {
+                        img.style.transition = 'none'; // Stop any ongoing transition
+                        // If there's more than one image, it's from a partial animation. Remove extras.
+                        if (img.parentElement && images.length > 1) {
+                           // Keep only the current one, remove others
+                           const imgSrc = currentPoiPhotos[currentPhotoIndex]?.url;
+                           if (img.src !== imgSrc) {
+                               img.remove();
+                           }
+                        }
+                    });
+                    isLightboxAnimating = false;
+                }
                 lightbox.style.display = 'none';
                 lightboxContent.innerHTML = ''; // Clear images on close
             }
@@ -1947,10 +2063,17 @@
                 lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
 
                 // Clean up after the new image has finished its transition
-                newImg.addEventListener('transitionend', () => {
-                    if (oldImg) oldImg.remove();
-                    isLightboxAnimating = false;
-                }, { once: true });
+                const transitionEndHandler = (event) => {
+                    // Ensure the event is for the new image and not a bubbled event
+                    if (event.target === newImg) {
+                        if (oldImg && oldImg.parentNode) {
+                            oldImg.remove();
+                        }
+                        isLightboxAnimating = false;
+                        newImg.removeEventListener('transitionend', transitionEndHandler);
+                    }
+                };
+                newImg.addEventListener('transitionend', transitionEndHandler);
             }
             
             function showPrevImage() {
@@ -1983,10 +2106,16 @@
                 lightboxCaption.textContent = `${currentPhotoIndex + 1} / ${currentPoiPhotos.length}`;
                 
                 // Clean up
-                newImg.addEventListener('transitionend', () => {
-                    if (oldImg) oldImg.remove();
-                    isLightboxAnimating = false;
-                }, { once: true });
+                const transitionEndHandler = (event) => {
+                    if (event.target === newImg) {
+                        if (oldImg && oldImg.parentNode) {
+                            oldImg.remove();
+                        }
+                        isLightboxAnimating = false;
+                        newImg.removeEventListener('transitionend', transitionEndHandler);
+                    }
+                };
+                newImg.addEventListener('transitionend', transitionEndHandler);
             }
 
             // Event listener for image clicks (delegated)
@@ -2014,9 +2143,18 @@
             });
 
             function createAddressPopover(button) {
-                // Remove any previously created popover immediately
                 const oldPopover = document.querySelector('.address-popover');
-                if (oldPopover) oldPopover.remove();
+
+                // If a popover exists and it's for the same button, just remove it and we're done.
+                if (oldPopover && oldPopover._ownerButton === button) {
+                    oldPopover.remove();
+                    return;
+                }
+
+                // If any other popover is open, remove it before creating the new one.
+                if (oldPopover) {
+                    oldPopover.remove();
+                }
 
                 // Ensure lightbox is closed
                 if (lightbox.style.display !== 'none') {
@@ -2027,6 +2165,7 @@
                 const popover = document.createElement('div');
                 popover.className = 'address-popover';
                 popover.textContent = address;
+                popover._ownerButton = button; // Link the popover to its button
 
                 // Stop the popover from closing when clicking inside it
                 popover.addEventListener('click', e => e.stopPropagation());
@@ -2050,7 +2189,16 @@
             }
 
             // Lightbox control listeners
-            closeBtn.addEventListener('click', closeLightbox);
+            const closeHandler = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                closeLightbox();
+            };
+            closeBtn.addEventListener('mousedown', closeHandler);
+            closeBtn.addEventListener('touchstart', closeHandler, { passive: false });
+            bottomCloseBtn.addEventListener('mousedown', closeHandler);
+            bottomCloseBtn.addEventListener('touchstart', closeHandler, { passive: false });
+
             nextBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 showNextImage();
@@ -2059,33 +2207,38 @@
                 e.stopPropagation();
                 showPrevImage();
             });
-            // Close lightbox if clicking on the overlay
-            lightbox.addEventListener('click', function(e) {
-                if (e.target === lightbox) {
-                    closeLightbox();
-                }
-            });
+            // The old generic click handler is removed, replaced by specific close areas.
 
             // Swipe functionality for mobile
             let touchstartX = 0;
             let touchendX = 0;
+            let touchstartY = 0;
+            let touchendY = 0;
 
             lightbox.addEventListener('touchstart', function(event) {
                 touchstartX = event.changedTouches[0].screenX;
+                touchstartY = event.changedTouches[0].screenY;
             }, false);
 
             lightbox.addEventListener('touchend', function(event) {
                 touchendX = event.changedTouches[0].screenX;
+                touchendY = event.changedTouches[0].screenY;
                 handleSwipeGesture();
             }, false);
 
             function handleSwipeGesture() {
-                if (touchendX < touchstartX - 50) { // Swiped left
-                    showNextImage();
+                const dx = touchendX - touchstartX;
+                const dy = touchendY - touchstartY;
+
+                // Check for a swipe gesture (significant horizontal movement, minimal vertical movement)
+                if (Math.abs(dx) > 50 && Math.abs(dy) < 50) {
+                    if (dx < 0) { // Swiped left
+                        showNextImage();
+                    } else { // Swiped right
+                        showPrevImage();
+                    }
                 }
-                if (touchendX > touchstartX + 50) { // Swiped right
-                    showPrevImage();
-                }
+                // A small movement is considered a tap, which will be handled by the 'click' event listener.
             }
         });
 
