@@ -203,21 +203,23 @@
             /* All hover animations removed */
         }
         
-        .poi-link {
-            text-decoration: none; /* 移除链接下划线 */
-            color: inherit; /* 继承父元素颜色 */
-        }
-        
         .poi-name {
             font-size: 16px;
             font-weight: bold;
             color: #333;
+            text-decoration: none; /* Remove underline for link */
             /* The following styles make the name an absolutely positioned overlay */
             position: absolute;
             top: 15px; /* Align with parent's padding */
             left: 15px; /* Align with parent's padding */
             right: 175px; /* Leave space for the 150px photo + 10px gap + 15px padding */
             white-space: nowrap; /* Force single-line display */
+            z-index: 2; /* Ensure it's on top of other info but below image */
+            transition: color 0.2s; /* Smooth color transition on hover */
+        }
+        
+        .poi-name:hover {
+            color: #1890ff; /* Change color on hover for better UX */
         }
         
         .poi-info {
@@ -718,6 +720,16 @@
             z-index: 5;
         }
 
+        .poi-item-photo-placeholder {
+            background-color: #f0f2f5; /* Light grey background to match theme */
+            color: #b0b0b0; /* Softer text color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 26px;
+            font-weight: 500;
+        }
+
         /* Lightbox Styles */
         .lightbox-overlay {
             position: fixed;
@@ -1089,7 +1101,7 @@
 
         // ===== POI 关键字智能映射 =====
         const POI_KEYWORD_MAP = {
-            '050100|050200': ['餐厅', '饭店',  '吃饭','中餐厅', '中餐','午餐', '午饭', '晚餐', '晚饭'],
+            '050100': ['餐厅', '饭店',  '吃饭','中餐厅', '中餐','午餐', '午饭', '晚餐', '晚饭'],
             '050101': ['酒楼'],
             '050102': ['四川菜', '川菜'],
             '050103': ['广东菜', '粤菜'],
@@ -1426,6 +1438,11 @@
                     // Escape quotes for the HTML attribute.
                     const photosJson = JSON.stringify(poi.photos).replace(/"/g, '&quot;');
                     photoHtml = `<img src="${firstPhotoUrl}" class="poi-item-photo lightbox-trigger" alt="${poi.name}" loading="lazy" data-photos="${photosJson}" data-poi-id="${poi.id}" title="点击预览 ${poi.photos.length} 张图片">`;
+                } else {
+                    // Render a placeholder if no photos are available.
+                    // It uses 'poi-item-photo' for sizing/positioning, and the new class for styling.
+                    // Importantly, it does NOT have the 'lightbox-trigger' class, making it unclickable.
+                    photoHtml = `<div class="poi-item-photo poi-item-photo-placeholder">敬请期待</div>`;
                 }
 
                 const fullAddress = buildFullAddress(poi);
@@ -1456,15 +1473,13 @@
                 }
                 
                 html += `
-                    <a href="${mapUrl}" target="_blank" class="poi-link">
-                        <div class="poi-item">
-                            <div class="poi-name">${index + 1}. ${poiName}</div>
-                            <div class="poi-info">
-                                ${infoHtml}
-                            </div>
-                            ${photoHtml}
+                    <div class="poi-item">
+                        <a href="${mapUrl}" target="_blank" class="poi-name">${index + 1}. ${poiName}</a>
+                        <div class="poi-info">
+                            ${infoHtml}
                         </div>
-                    </a>
+                        ${photoHtml}
+                    </div>
                 `;
             });
             listContainer.innerHTML = html;
