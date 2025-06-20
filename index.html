@@ -342,6 +342,30 @@
             border: 1px solid #b7eb8f;
         }
         
+        .info-prompt {
+            color: #1890ff; /* Blue text */
+            background: #e6f7ff; /* Light blue background */
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #91d5ff; /* Blue border */
+        }
+
+        .recommend-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 2px 8px; /* row-gap column-gap */
+            align-items: center;
+        }
+        .recommend-grid .recommend-emoji {
+            grid-row: 1 / span 2;
+            font-size: 1.5em;
+            align-self: center;
+        }
+        .recommend-grid .recommend-line-1,
+        .recommend-grid .recommend-text {
+            grid-column: 2;
+        }
+        
         .sort-buttons button.active {
             background-color: #096dd9;
             border-color: #096dd9;
@@ -515,7 +539,7 @@
             }
 
             .category-row:nth-child(1) {
-                grid-template-columns: repeat(8, 1fr); /* 第一行8列 */
+                grid-template-columns: repeat(9, 1fr); /* 第一行9列 */
             }
 
             .category-row:nth-child(2) {
@@ -854,6 +878,17 @@
             from { transform: translateX(0); }
             to { transform: translateX(110%); }
         }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
     </style>
 </head>
 <body>
@@ -863,8 +898,8 @@
         
         <div class="search-form">
             <div class="form-group">
-                <label for="locationKeyword">1. 输入中心点关键字:</label>
-                <input type="text" id="locationKeyword" placeholder="例如：北京万达" value="北京天坛公园">
+                <label for="locationKeyword">1.输入中心点关键字:</label>
+                <input type="text" id="locationKeyword" placeholder="例如：广州市广州塔" value="">
             </div>
             <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -873,8 +908,7 @@
                 <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
 
                 <div class="form-group">
-                    <label for="keywords">2. 输入关键字或点击下方快捷分类:</label>
-                    <input type="text" id="keywords" placeholder="例如：西餐厅、火锅、星巴克等" value="中餐厅">
+                    <label for="keywords">2.点击分类按钮或手动输入关键字:</label>
                 </div>
 
                 <div class="category-buttons form-group">
@@ -887,17 +921,18 @@
                         <button onclick="searchByCategory('美容美发')">美容美发</button>
                         <button onclick="searchByCategory('运动场所')">运动场所</button>
                         <button onclick="searchByCategory('休闲娱乐')">休闲娱乐</button>
+                        <button onclick="searchByCategory('午餐')">午餐/晚餐</button>
                     </div>
                     <div class="category-row">
-                        <button onclick="searchByCategory('午餐')">午餐/晚餐</button>
+                        <button onclick="searchByCategory('电影院')">电影/剧院</button>
                         <button onclick="searchByCategory('冷饮')">冷饮/饮品</button>
                         <button onclick="searchByCategory('超市')">超市/便利店</button>
                         <button onclick="searchByCategory('买药')">买药</button>
                         <button onclick="searchByCategory('蔬菜')">蔬菜</button>
                         <button onclick="searchByCategory('酒店')">酒店</button>
                         <button onclick="searchByCategory('景点')">景点</button>
-                        <button onclick="searchByCategory('电影院')">电影/剧院</button>
                         <button onclick="searchByCategory('咖啡')">咖啡</button>
+                        <button onclick="searchByCategory('公共厕所')">公共厕所</button>
                     </div>
                 </div>
                 
@@ -927,6 +962,10 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <input type="text" id="keywords" placeholder="例如：西餐厅、火锅、星巴克等" value="中餐厅">
                 </div>
                 
                 <button onclick="searchNearby()" id="searchBtn">🔍 搜索周边</button>
@@ -1087,6 +1126,7 @@
             '080500|080300': ['休闲娱乐'],
             '080600': ['电影院'],
             '071100|090201': ['美容美发'],
+            '200300': ['公共厕所'],
         };
         const SORTED_KEYWORDS = Object.entries(POI_KEYWORD_MAP)
             .flatMap(([code, keywords]) => keywords.map(kw => ({ keyword: kw, code: code })))
@@ -1554,8 +1594,21 @@
         function renderLocationChoices(pois, recommendCity = false) {
             locationChoices = pois;
             const statusDiv = document.getElementById('locationStatus');
-            const recommendationText = recommendCity ? '<br>(推荐先输入城市名)' : '';
-            let choicesHtml = `<div class="success">请选择以下坐标中的一个:${recommendationText}</div>`;
+            
+            let promptHtml;
+            if (recommendCity) {
+                // New structure using grid for alignment
+                promptHtml = `
+                    <div class="info-prompt recommend-grid">
+                        <div class="recommend-emoji">💡</div>
+                        <div class="recommend-line-1">请选择以下坐标中的一个:</div>
+                        <div class="recommend-text">推荐输入包含城市的地点以精确定位</div>
+                    </div>`;
+            } else {
+                promptHtml = `<div class="success">请选择以下坐标中的一个:</div>`;
+            }
+
+            let choicesHtml = promptHtml;
             
             pois.forEach((poi, index) => {
                 const fullAddress = buildFullAddress(poi);
@@ -1597,10 +1650,9 @@
          * 根据关键字搜索中心点坐标
          */
         async function searchLocationByKeyword() {
-            const locationKeyword = document.getElementById('locationKeyword').value.trim();
+            let locationKeyword = document.getElementById('locationKeyword').value.trim();
             if (!locationKeyword) {
-                alert('请输入中心点关键字！');
-                return;
+                locationKeyword = '广州市广州塔';
             }
 
             const statusDiv = document.getElementById('locationStatus');
@@ -1684,11 +1736,13 @@
                     // Cache the result along with whether a city was matched
                     locationCache[locationKeyword] = { pois: poisToProcess, cityMatch: !!matchedCity };
 
-                    if (poisToProcess.length > 1) {
-                        // Pass a flag to recommend entering city if no city was matched
+                    // If we found multiple results, OR if no specific city was given in the query,
+                    // it's always better to show choices rather than picking one automatically.
+                    // The hint to add a city is only shown if no city was found in the keyword.
+                    if (poisToProcess.length > 1 || !matchedCity) {
                         renderLocationChoices(poisToProcess, !matchedCity);
                     } else {
-                        // Only one result, process it directly
+                        // This case is now only for when a city was specified AND we got a single, unambiguous result.
                         processLocationPoi(poisToProcess[0], false);
                     }
                 } else {
