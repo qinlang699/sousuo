@@ -1539,7 +1539,7 @@
             const fullAddress = addressParts.join('') || '地址未知';
 
             const statusDiv = document.getElementById('locationStatus');
-            statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong>中心点:</strong> ${poi.name}<br><strong>详细地址:</strong> ${fullAddress}</div>`;
+            statusDiv.innerHTML = `<div class="success">✅ 坐标获取成功！<br><strong></strong> ${poi.name}<br><strong></strong> ${fullAddress}</div>`;
             document.getElementById('nearby-search-section').style.display = 'block';
             
             // 成功处理后，更新"上一次的关键字"
