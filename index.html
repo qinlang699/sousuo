@@ -1231,7 +1231,40 @@
             
             let html = '';
             pois.forEach((poi, index) => {
-                const displayType = poi.type ? (poi.type.split(';').pop() || '未分类') : '未分类';
+                let displayType;
+                if (poi.type) {
+                    const typeParts = poi.type.split(';');
+                    // 使用第二级分类（如果存在），否则回退到第一级
+                    displayType = typeParts[1] || typeParts[0] || '未分类';
+                } else {
+                    displayType = '未分类';
+                }
+
+                // 根据要求应用自定义名称映射
+                const typeNameMap = {
+                    '便民商店/便利店': '便利店',
+                    '个人用品/化妆品店': '洗护化妆品',
+                    '汽车养护/装饰': '汽车养护',
+                    '金融保险服务机构': '金融服务',
+                    '政府及社会团体相关': '政府机构相关',
+                    '医药保健销售店': '医药保健销售',
+                    '医疗保健服务场所': '医疗保健服务',
+                    '电动自动车充电站': '双轮车充电站',
+                    '彩票彩券销售点': '彩票彩券',
+                    '服装鞋帽皮具店': '服装鞋帽皮具'
+                };
+                displayType = typeNameMap[displayType] || displayType;
+
+                // 如果第二类型的最后两个字为：维修，统一改成：汽车维修
+                if (displayType.endsWith('维修')) {
+                    displayType = '汽车维修';
+                }
+
+                // 当第二类型包含 销售 且大于等于7个中文字，全部改成汽车销售
+                if (displayType.includes('销售') && displayType.length >= 7) {
+                    displayType = '汽车销售';
+                }
+                
                 const mapUrl = getMapUrl(poi);
                 const poiName = truncateString(poi.name || '未知地点', 20);
 
