@@ -896,7 +896,7 @@
                         <button onclick="searchByCategory('蔬菜')">蔬菜</button>
                         <button onclick="searchByCategory('酒店')">酒店</button>
                         <button onclick="searchByCategory('景点')">景点</button>
-                        <button onclick="searchByCategory('电影院')">电影院</button>
+                        <button onclick="searchByCategory('电影院')">电影/剧院</button>
                         <button onclick="searchByCategory('咖啡')">咖啡</button>
                     </div>
                 </div>
@@ -954,7 +954,7 @@
         // ===== 配置参数区域 - 可修改 =====
         let locationSearchUrl = ''; // 用于存储中心点搜索的URL
         let originalDistanceSortedPois = []; // 存储按距离排序的原始POI列表
-        let currentDisplaySort = 'comprehensive'; // 当前显示的排序规则
+        let currentDisplaySort = 'rating'; // 当前显示的排序规则, 改为好评优先
         let comprehensiveSortMode = 'cost_effective'; // 综合排序的模式: 'cost_effective', 'high_end'
         let searchCache = {}; // 新增：用于缓存搜索结果
         let locationCache = {}; // 新增：用于缓存中心点搜索结果
@@ -1208,81 +1208,129 @@
          * @param {'cost_effective' | 'high_end'} mode
          */
         function sortPoisByComprehensive(pois, mode) {
-            // 确保pois是按距离排序的
-            const sortedByDistance = [...pois].sort((a, b) => a.distance - b.distance);
-
-            const poisWithRanks = sortedByDistance.map(poi => ({
-                ...poi,
-                distanceRank: Math.floor(poi.distance / 500) + 1,
-                rating: parseFloat(poi.business?.rating) || 0,
-                cost: parseFloat(poi.business?.cost) || 0,
-            }));
-
-            // 评级排名 (高分在前)
-            const sortedByRating = [...poisWithRanks].sort((a, b) => b.rating - a.rating);
-            sortedByRating.forEach((p, i) => {
-                const originalPoi = poisWithRanks.find(item => item.id === p.id);
-                if (originalPoi) originalPoi.ratingRank = i + 1;
-            });
-
-            // 人均消费排名
-            const withCost = poisWithRanks.filter(p => p.cost > 0);
-            const withoutCost = poisWithRanks.filter(p => p.cost <= 0);
-            
+            // 新的性价比排序逻辑，不再区分 mode
             if (mode === 'cost_effective') {
-                withCost.sort((a, b) => a.cost - b.cost); // 性价比: 低消费在前
-            } else {
-                withCost.sort((a, b) => b.cost - a.cost); // 高档: 高消费在前
-            }
+                const poisWithData = pois
+                    .map(poi => ({
+                        ...poi,
+                        rating: parseFloat(poi.business?.rating) || 0,
+                        cost: parseFloat(poi.business?.cost) || 0,
+                        distance: parseInt(poi.distance, 10) || Infinity,
+                        distanceRank: Math.floor((parseInt(poi.distance, 10) || 0) / 500) + 1,
+                    }))
+                    .filter(poi => poi.rating > 0 && poi.cost > 0);
 
-            withCost.forEach((p, i) => {
-                const originalPoi = poisWithRanks.find(item => item.id === p.id);
-                if (originalPoi) originalPoi.costRank = i + 1;
-            });
+                if (poisWithData.length === 0) return pois; // 如果没有可用数据，返回原始列表
 
-            const lowestRank = withCost.length + 1;
-            withoutCost.forEach(p => {
-                 const originalPoi = poisWithRanks.find(item => item.id === p.id);
-                 if (originalPoi) originalPoi.costRank = lowestRank;
-            });
-            
-            // Find max ranks for normalization
-            const maxRatingRank = poisWithRanks.length;
-            const maxCostRank = poisWithRanks.length; // All items get a costRank
-            let maxDistance = 0;
-            poisWithRanks.forEach(p => {
-                if (p.distance > maxDistance) maxDistance = p.distance;
-            });
-            const maxDistanceRank = Math.floor(maxDistance / 500) + 1;
+                poisWithData.forEach(poi => {
+                    poi.pricePerformance = poi.rating / poi.cost;
+                });
 
-            // Define weights for different modes
-            const weights = mode === 'cost_effective'
-                ? { distance: 0.3, rating: 0.3, cost: 0.4 }
-                : { distance: 0, rating: 0.3, cost: 0.7 };
-            
-            // Calculate composite score using normalized ranks for fairness
-            poisWithRanks.forEach(p => {
-                // 对于没有消费或评分信息的POI，在性价比和高档排序中都应该排在后面
-                if (p.cost <= 0) {
-                    p.compositeScore = Infinity;
-                    return;
-                }
+                // 找到最大和最小的性价比值和距离排名，用于归一化
+                let maxPricePerformance = -Infinity, minPricePerformance = Infinity;
+                let maxDistanceRank = -Infinity, minDistanceRank = Infinity;
 
-                if (p.ratingRank && p.costRank) { // Ensure ranks exist
-                    // Normalize ranks to a 0-1 scale.
-                    const normRating = maxRatingRank > 1 ? (p.ratingRank - 1) / (maxRatingRank - 1) : 0;
-                    const normCost = maxCostRank > 1 ? (p.costRank - 1) / (maxCostRank - 1) : 0;
-                    const normDistance = maxDistanceRank > 1 ? (p.distanceRank - 1) / (maxDistanceRank - 1) : 0;
+                poisWithData.forEach(p => {
+                    if (p.pricePerformance > maxPricePerformance) maxPricePerformance = p.pricePerformance;
+                    if (p.pricePerformance < minPricePerformance) minPricePerformance = p.pricePerformance;
+                    if (p.distanceRank > maxDistanceRank) maxDistanceRank = p.distanceRank;
+                    if (p.distanceRank < minDistanceRank) minDistanceRank = p.distanceRank;
+                });
+                
+                // 归一化并计算综合得分
+                poisWithData.forEach(poi => {
+                    // 归一化性价比值 (越高越好)
+                    const normPricePerformance = (maxPricePerformance - minPricePerformance > 0)
+                        ? (poi.pricePerformance - minPricePerformance) / (maxPricePerformance - minPricePerformance)
+                        : 0;
+
+                    // 归一化距离排名 (越低越好，所以用 1 - normalized_value)
+                    const normDistanceRank = (maxDistanceRank - minDistanceRank > 0)
+                        ? 1 - ((poi.distanceRank - minDistanceRank) / (maxDistanceRank - minDistanceRank))
+                        : 0;
                     
-                    p.compositeScore = (normDistance * weights.distance) + (normRating * weights.rating) + (normCost * weights.cost);
-                } else {
-                    p.compositeScore = Infinity; // Put items without full ranks at the end
-                }
-            });
+                    // 应用权重
+                    poi.compositeScore = (normPricePerformance * 0.7) + (normDistanceRank * 0.3);
+                });
 
-            // 按综合得分升序排序
-            poisWithRanks.sort((a, b) => a.compositeScore - b.compositeScore);
-            return poisWithRanks;
+                // 按综合得分降序排序
+                poisWithData.sort((a, b) => b.compositeScore - a.compositeScore);
+                
+                // 将没有数据的POI放回列表末尾
+                const poisWithoutData = pois.filter(p => !(p.business?.rating > 0 && p.business?.cost > 0));
+                
+                return [...poisWithData, ...poisWithoutData];
+
+            } else { // 'high_end' 逻辑保持不变或按原样处理
+                 // 确保pois是按距离排序的
+                const sortedByDistance = [...pois].sort((a, b) => a.distance - b.distance);
+
+                const poisWithRanks = sortedByDistance.map(poi => ({
+                    ...poi,
+                    distanceRank: Math.floor(poi.distance / 500) + 1,
+                    rating: parseFloat(poi.business?.rating) || 0,
+                    cost: parseFloat(poi.business?.cost) || 0,
+                }));
+
+                // 评级排名 (高分在前)
+                const sortedByRating = [...poisWithRanks].sort((a, b) => b.rating - a.rating);
+                sortedByRating.forEach((p, i) => {
+                    const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                    if (originalPoi) originalPoi.ratingRank = i + 1;
+                });
+
+                // 人均消费排名
+                const withCost = poisWithRanks.filter(p => p.cost > 0);
+                const withoutCost = poisWithRanks.filter(p => p.cost <= 0);
+                
+                // 高档: 高消费在前
+                withCost.sort((a, b) => b.cost - a.cost); 
+                
+                withCost.forEach((p, i) => {
+                    const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                    if (originalPoi) originalPoi.costRank = i + 1;
+                });
+
+                const lowestRank = withCost.length + 1;
+                withoutCost.forEach(p => {
+                    const originalPoi = poisWithRanks.find(item => item.id === p.id);
+                    if (originalPoi) originalPoi.costRank = lowestRank;
+                });
+                
+                // Find max ranks for normalization
+                const maxRatingRank = poisWithRanks.length;
+                const maxCostRank = poisWithRanks.length; // All items get a costRank
+                let maxDistance = 0;
+                poisWithRanks.forEach(p => {
+                    if (p.distance > maxDistance) maxDistance = p.distance;
+                });
+                const maxDistanceRank = Math.floor(maxDistance / 500) + 1;
+
+                // Define weights for high_end mode
+                const weights = { distance: 0, rating: 0.3, cost: 0.7 };
+                
+                // Calculate composite score using normalized ranks for fairness
+                poisWithRanks.forEach(p => {
+                    if (p.cost <= 0) {
+                        p.compositeScore = Infinity;
+                        return;
+                    }
+
+                    if (p.ratingRank && p.costRank) { // Ensure ranks exist
+                        const normRating = maxRatingRank > 1 ? (p.ratingRank - 1) / (maxRatingRank - 1) : 0;
+                        const normCost = maxCostRank > 1 ? (p.costRank - 1) / (maxCostRank - 1) : 0;
+                        const normDistance = maxDistanceRank > 1 ? (p.distanceRank - 1) / (maxDistanceRank - 1) : 0;
+                        
+                        p.compositeScore = (normDistance * weights.distance) + (normRating * weights.rating) + (normCost * weights.cost);
+                    } else {
+                        p.compositeScore = Infinity; // Put items without full ranks at the end
+                    }
+                });
+
+                // 按综合得分升序排序
+                poisWithRanks.sort((a, b) => a.compositeScore - b.compositeScore);
+                return poisWithRanks;
+            }
         }
 
         /**
@@ -1666,7 +1714,7 @@
             // 1. 清理状态和缓存
             originalDistanceSortedPois = [];
             cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
-            currentDisplaySort = 'comprehensive';
+            currentDisplaySort = 'rating'; // 确保每次新搜索都重置为好评优先
             comprehensiveSortMode = 'cost_effective';
             
             const resultsDiv = document.getElementById('results');
@@ -1834,7 +1882,7 @@
                 };
                 searchCache[cacheKey] = dataToCache;
                 
-                displayResults(aggregatedData, pagesToDisplay, initialPoisToDisplay, rawFetchedCount, isPoiTypeSearch, false);
+                displayResults(aggregatedData, pagesToDisplay, cachedSortedResults['rating'], rawFetchedCount, isPoiTypeSearch, false);
 
             } catch (error) {
                 console.error('❌ 请求失败:', error);
