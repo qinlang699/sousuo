@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>正在跳转...</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            /* Hide the body by default to prevent a "flash" of content during redirection */
+            visibility: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 20px 25px;
+            box-sizing: border-box;
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        .mask-text {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: right;
+            line-height: 1.5;
+            margin-top: 50px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .arrow {
+            width: 80px;
+            height: 80px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='white'%3E%3Cpath d='M85,15 C90,10 90,20 85,25 L50,60 L70,55 C75,54 80,60 78,65 L68,85 C66,90 60,88 58,83 L38,53 C36,48 40,44 45,46 L60,50 L85,15z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transform: rotate(10deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="mask">
+        <div class="arrow"></div>
+        <p class="mask-text">
+            请点击右上角菜单<br>选择"在浏览器中打开"
+        </p>
+    </div>
+    <script>
+        (function() {
+            const ua = navigator.userAgent.toLowerCase();
+            if (!/micromessenger/.test(ua)) {
+                // We are in a real browser. Redirect immediately.
+                // The body is hidden, so the user only sees a blank page flash.
+                const params = new URLSearchParams(window.location.search);
+                const poiId = params.get('poiId');
+                if (poiId) {
+                    const mapUrl = `https://www.amap.com/place/${poiId}`;
+                    window.location.replace(mapUrl);
+                } else {
+                    // On error, make the body visible to show the message.
+                    document.body.style.visibility = 'visible';
+                    document.body.innerHTML = '错误：缺少地点信息。请返回重试。';
+                }
+            } else {
+                // This is an edge case: the redirect page itself is opened in WeChat.
+                // Make the body visible to show the guide.
+                document.body.style.visibility = 'visible';
+            }
+        })();
+    </script>
+</body>
+</html> 
