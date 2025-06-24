@@ -974,18 +974,38 @@
         }
 
         /* Pointing arrow for restore-from-link */
-        #pointing-arrow {
-            display: none;
-            position: absolute; /* Use absolute to scroll with the page content */
-            width: 60px;
-            height: 60px;
+        #arrow-container {
+            display: none; /* Initially hidden */
+            position: absolute;
             z-index: 4000;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.4s ease-in-out;
-            /* A vibrant, animated arrow pointing down */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50,20 V80 M35,65 L50,80 L65,65' fill='none' stroke='%23e84118' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            /* Use flex to align children */
+            align-items: center;
+            gap: 8px; /* Space between arrow and text */
             animation: bounce-arrow 1s infinite;
+        }
+
+        #pointing-arrow-visual {
+            width: 60px;
+            height: 60px;
+            /* Changed stroke color to blue #1890ff */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50,20 V80 M35,65 L50,80 L65,65' fill='none' stroke='%231890ff' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            flex-shrink: 0; /* Prevent arrow from shrinking */
+        }
+
+        #pointing-arrow-text {
+            color: #333;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.1);
         }
 
         @keyframes bounce-arrow {
@@ -1002,7 +1022,10 @@
     </style>
 </head>
 <body>
-    <div id="pointing-arrow"></div>
+    <div id="arrow-container">
+        <div id="pointing-arrow-visual"></div>
+        <span id="pointing-arrow-text">点击地点跳转高德app</span>
+    </div>
     <div class="container">
         <h1>🗺️ 高德地图周边搜索</h1>
         
@@ -2850,31 +2873,31 @@
                     }, 2500);
 
                     // ===== New Arrow Logic =====
-                    const arrow = document.getElementById('pointing-arrow');
-                    if (arrow) {
+                    const arrowContainer = document.getElementById('arrow-container');
+                    if (arrowContainer) {
                         const targetRect = targetElement.getBoundingClientRect();
                         
-                        // 将箭头定位在目标元素的正上方
-                        // 使用 window.scrollY 补偿页面滚动
-                        const arrowTop = targetRect.top + window.scrollY - 75; // 箭头在元素上方75px
-                        const arrowLeft = targetRect.left + (targetRect.width / 2) - 30; // 30是箭头宽度的一半
+                        // Position the container. The arrow's visual center should be at 1/4 width of the target.
+                        const arrowVisualWidth = 60; // as defined in CSS
+                        const arrowLeft = targetRect.left + (targetRect.width / 4) - (arrowVisualWidth / 2);
+                        const arrowTop = targetRect.top + window.scrollY - 75; // 60px arrow height + 15px gap
 
-                        arrow.style.top = `${arrowTop}px`;
-                        arrow.style.left = `${arrowLeft}px`;
+                        arrowContainer.style.top = `${arrowTop}px`;
+                        arrowContainer.style.left = `${arrowLeft}px`;
                         
-                        // 通过延时确保 fade-in 过渡效果生效
-                        arrow.style.display = 'block';
+                        // Make it visible with a fade-in effect
+                        arrowContainer.style.display = 'flex';
                         setTimeout(() => {
-                            arrow.style.opacity = '1';
+                            arrowContainer.style.opacity = '1';
                         }, 10);
 
-                        // 3秒后淡出并隐藏箭头
+                        // Fade out and hide after 3 seconds
                         setTimeout(() => {
-                            arrow.style.opacity = '0';
-                            // 在过渡动画结束后完全隐藏
+                            arrowContainer.style.opacity = '0';
+                            // Hide completely after the transition ends
                             setTimeout(() => {
-                                arrow.style.display = 'none';
-                            }, 400); // 匹配CSS中的过渡时间
+                                arrowContainer.style.display = 'none';
+                            }, 400); // Must match CSS transition duration
                         }, 3000);
                     }
                 }
