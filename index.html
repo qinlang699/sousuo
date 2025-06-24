@@ -1523,7 +1523,7 @@
                 }
                 
                 html += `
-                    <div class="poi-item">
+                    <div class="poi-item" id="poi-item-${poi.id}">
                         <a href="#" onclick="openMapForPoi(event, '${poi.id}')" class="poi-name">${index + 1}. ${poiName}</a>
                         <div class="poi-info">
                             ${infoHtml}
@@ -1717,8 +1717,9 @@
 
         /**
          * 根据关键字搜索中心点坐标
+         * @param {boolean} isAutomated - 是否为自动化执行，若是，则自动选择第一个结果
          */
-        async function searchLocationByKeyword() {
+        async function searchLocationByKeyword(isAutomated = false) {
             let locationKeyword = document.getElementById('locationKeyword').value.trim();
             if (!locationKeyword) {
                 locationKeyword = '杭州西湖';
@@ -1753,6 +1754,7 @@
                         } else {
                             statusDiv.innerHTML = `<div class="error">没有找到满足您要求的坐标</div>`;
                         }
+
                     } else {
                         throw new Error("Invalid cache format.");
                     }
@@ -1804,14 +1806,11 @@
                 if (poisToProcess.length > 0) {
                     // Cache the result along with whether a city was matched
                     locationCache[locationKeyword] = { pois: poisToProcess, cityMatch: !!matchedCity };
-
-                    // If we found multiple results, OR if no specific city was given in the query,
-                    // it's always better to show choices rather than picking one automatically.
-                    // The hint to add a city is only shown if no city was found in the keyword.
+                    
+                    // 手动流程：显示选项或直接处理
                     if (poisToProcess.length > 1 || !matchedCity) {
                         renderLocationChoices(poisToProcess, !matchedCity);
                     } else {
-                        // This case is now only for when a city was specified AND we got a single, unambiguous result.
                         processLocationPoi(poisToProcess[0], false);
                     }
                 } else {
@@ -1854,7 +1853,8 @@
             `;
 
             // 4. 将实际的搜索操作推迟，以确保滚动动画流畅
-            setTimeout(doSearch, 50);
+            await sleep(50);
+            await doSearch();
         }
 
         /**
@@ -2225,18 +2225,30 @@
             // 由于微信和外部浏览器会话隔离，此方案无效。
             // 保留一个干净的启动流程。
 
-            // ===== 新增：处理从 /poi/ID 跳转过来的逻辑 =====
+            // ===== 新增：处理从 /poi/ID?context... 跳转过来的逻辑 =====
             const path = window.location.pathname;
-            // 匹配 /poi/ followed by an ID (e.g., /poi/B0FFG86B7B)
             const poiMatch = path.match(/^\/poi\/([A-Z0-9]+)$/i); 
 
             if (poiMatch) {
                 const poiId = poiMatch[1];
-                // 使用 history.replaceState 将 URL 清理回根路径, 
-                // 这样用户刷新页面时不会重复触发加载。
-                // 这也让地址栏看起来更干净。
+                const params = new URLSearchParams(window.location.search);
+                const context = {
+                    poiIdToScroll: poiId,
+                    center_name: params.get('center_name'),
+                    center_lon: params.get('center_lon'),
+                    center_lat: params.get('center_lat'),
+                    search_kw: params.get('search_kw'),
+                    radius: params.get('radius'),
+                    count: params.get('count')
+                };
+
+                // 清理URL，避免用户刷新时重复触发
                 history.replaceState(null, '', '/');
-                handlePoiRedirect(poiId);
+
+                // 只有在上下文信息完整时，才执行自动还原
+                if (context.center_name && context.center_lon && context.center_lat && context.search_kw && context.radius && context.count) {
+                    restoreSearchAndScroll(context);
+                }
             }
             // ===== 处理跳转逻辑结束 =====
 
@@ -2671,7 +2683,24 @@
 
             if (deviceType === 'wechat') {
                 // 在微信中，使用 history.pushState 修改URL，然后显示指引
-                const newUrl = `/poi/${poi.id}`;
+                const centerName = document.getElementById('locationKeyword').value;
+                const centerLon = document.getElementById('longitude').value;
+                const centerLat = document.getElementById('latitude').value;
+                const searchKw = document.getElementById('keywords').value;
+                const radius = document.getElementById('radius').value;
+                const count = document.getElementById('totalCount').value;
+
+                const params = new URLSearchParams();
+                params.set('center_name', centerName);
+                params.set('center_lon', centerLon);
+                params.set('center_lat', centerLat);
+                params.set('search_kw', searchKw);
+                params.set('radius', radius);
+                params.set('count', count);
+                
+                
+                const newUrl = `/poi/${poi.id}?${params.toString()}`;
+
                 history.pushState({ poiId: poi.id }, '', newUrl);
                 document.getElementById('wx-guide-mask').style.display = 'flex';
             } else if (deviceType === 'ios' || deviceType === 'android') {
@@ -2695,44 +2724,44 @@
         }
 
         /**
-         * 新增：处理从特定POI链接跳转的函数
-         * @param {string} poiId - 高德POI的ID
+         * 新增：根据URL中的上下文信息，自动还原搜索并滚动到指定POI
+         * @param {object} context - 包含所有搜索参数和目标POI ID的对象
          */
-        async function handlePoiRedirect(poiId) {
+        async function restoreSearchAndScroll(context) {
             const statusDiv = document.getElementById('locationStatus');
-            statusDiv.innerHTML = `<div class="info-prompt">正在根据链接加载地点信息...</div>`;
-            document.getElementById('nearby-search-section').style.display = 'none';
+            statusDiv.innerHTML = `<div class="info-prompt">正在根据链接自动还原搜索...</div>`;
 
-            const url = new URL(CONFIG.SCF_URL);
-            url.searchParams.set('apiPath', 'v5/place/detail');
-            url.searchParams.set('id', poiId);
-            url.searchParams.set('show_fields', 'business,photos');
+            // 步骤1: 自动定位中心点
+            document.getElementById('locationKeyword').value = context.center_kw;
+            await searchLocationByKeyword(true); // 使用 true 以激活自动化模式
 
-            try {
-                const response = await fetch(url.toString());
-                const data = await response.json();
+            // 检查中心点是否定位成功
+            const lon = document.getElementById('longitude').value;
+            if (!lon) {
+                statusDiv.innerHTML = `<div class="error">自动定位中心点 "${context.center_kw}" 失败，请手动搜索。</div>`;
+                return;
+            }
+
+            // 步骤2: 填充其他搜索参数
+            document.getElementById('keywords').value = context.search_kw;
+            document.getElementById('radius').value = context.radius;
+            document.getElementById('totalCount').value = context.count;
+
+            // 步骤3: 执行周边搜索
+            await searchNearby();
+
+            // 步骤4: 滚动到目标POI并高亮显示
+            const targetElement = document.getElementById(`poi-item-${context.poiIdToScroll}`);
+            if (targetElement) {
+                // 滚动到视图中央，提供更好的上下文
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 
-                if (data.status === '1' && data.pois && data.pois.length > 0) {
-                    const poi = data.pois[0];
-                    
-                    // 将获取到的POI名称填入中心点输入框
-                    document.getElementById('locationKeyword').value = poi.name;
-                    
-                    // 直接使用获取到的POI信息设置中心点，并显示周边搜索区域
-                    processLocationPoi(poi);
-
-                    // 自动触发一次周边搜索，使用输入框中的默认或预设关键字
-                    // 为了更好的用户体验，延迟一小段时间再搜索
-                    setTimeout(() => {
-                        searchNearby();
-                    }, 100);
-
-                } else {
-                    statusDiv.innerHTML = `<div class="error">无法加载链接中的地点信息: ${data.info || '未找到该地点'}</div>`;
-                }
-            } catch (error) {
-                console.error('Failed to handle POI redirect:', error);
-                statusDiv.innerHTML = `<div class="error">加载链接信息时网络出错: ${error.message}</div>`;
+                // 添加高亮效果，让用户能立刻注意到
+                targetElement.style.transition = 'background-color 1s ease-in-out';
+                targetElement.style.backgroundColor = '#e6f7ff'; // 使用主题蓝色
+                setTimeout(() => {
+                    targetElement.style.backgroundColor = ''; // 2.5秒后恢复原状
+                }, 2500);
             }
         }
     </script>
