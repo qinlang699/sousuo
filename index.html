@@ -2267,6 +2267,8 @@
             const poiMatch = path.match(/^\/poi\/([A-Z0-9]+)$/i); 
 
             if (poiMatch) {
+                const deviceType = getDeviceType();
+
                 const poiId = poiMatch[1];
                 const params = new URLSearchParams(window.location.search);
                 const context = {
@@ -2279,12 +2281,15 @@
                     count: params.get('count')
                 };
 
-                // 清理URL，避免用户刷新时重复触发
+                // 立即清理URL，避免用户刷新时重复触发。
                 history.replaceState(null, '', '/');
 
-                // 只有在上下文信息完整时，才执行自动还原
-                if (context.center_name && context.center_lon && context.center_lat && context.search_kw && context.radius && context.count) {
-                    restoreSearchAndScroll(context);
+                // 只有在非微信环境（例如从"在浏览器打开"跳转过来后）才执行自动还原
+                if (deviceType !== 'wechat') {
+                    // 只有在上下文信息完整时，才执行自动还原
+                    if (context.center_name && context.center_lon && context.center_lat && context.search_kw && context.radius && context.count) {
+                        restoreSearchAndScroll(context);
+                    }
                 }
             }
             // ===== 处理跳转逻辑结束 =====
@@ -2795,7 +2800,7 @@
                 const targetElement = document.getElementById(`poi-item-${context.poiIdToScroll}`);
                 if (targetElement) {
                     // 滚动到视图中央，提供更好的上下文
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetElement.scrollIntoView({ behavior: 'auto', block: 'center' });
                     
                     // 添加高亮效果，让用户能立刻注意到
                     targetElement.style.transition = 'background-color 1s ease-in-out';
