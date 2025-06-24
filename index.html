@@ -901,6 +901,41 @@
             white-space: nowrap;
             border-width: 0;
         }
+
+        /* Styles for the WX guide mask */
+        #wx-guide-mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 20px 25px;
+            box-sizing: border-box;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            cursor: pointer;
+        }
+        #wx-guide-mask .arrow {
+            width: 80px;
+            height: 80px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='white'%3E%3Cpath d='M85,15 C90,10 90,20 85,25 L50,60 L70,55 C75,54 80,60 78,65 L68,85 C66,90 60,88 58,83 L38,53 C36,48 40,44 45,46 L60,50 L85,15z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transform: rotate(10deg);
+        }
+        #wx-guide-mask .mask-text {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: right;
+            line-height: 1.5;
+            margin-top: 50px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
@@ -1000,6 +1035,14 @@
     </div>
 
     <a id="scrollTopBtn" title="回到顶部">▲</a>
+
+    <!-- WX Guide Mask -->
+    <div id="wx-guide-mask">
+        <div class="arrow"></div>
+        <p class="mask-text">
+            请点击右上角菜单<br>选择"在浏览器中打开"
+        </p>
+    </div>
 
     <script>
         // ===== 配置参数区域 - 可修改 =====
@@ -1499,16 +1542,17 @@
             const deviceType = getDeviceType();
 
             switch (deviceType) {
-                case 'wechat':
-                    // 在微信中，必须使用网页链接，这个链接能引导用户在浏览器打开或直接在内置地图查看
-                    return `https://uri.amap.com/marker?position=${lon},${lat}&name=${poiName}&src=mypage&coordinate=gaode&callnative=1`;
                 case 'ios':
                     return `iosamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
                 case 'android':
                     return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
+                case 'wechat':
+                    // In WeChat, direct to a guide page that instructs the user to open in an external browser.
+                    // The guide page itself handles the final redirection.
+                    return `wx-redirect.html?poiId=${poi.id}`;
                 case 'pc':
                 default:
-                    // Use the reliable POI ID link for desktops
+                    // For PC, use the standard Gaode web page for the POI.
                     return `https://www.amap.com/place/${poi.id}`;
             }
         }
@@ -2268,6 +2312,20 @@
                 window.scrollTo({top: 0, behavior: 'smooth'});
             });
 
+            // ===== WX Mask Logic =====
+            const wxGuideMask = document.getElementById('wx-guide-mask');
+
+            // Clicking the mask will act like pressing the back button.
+            wxGuideMask.addEventListener('click', () => {
+                // We use history.back() to reverse the pushState, which will also trigger the popstate event.
+                history.back();
+            });
+
+            // Listen for popstate to hide the mask (e.g., when history.back() is called or user hits back button)
+            window.addEventListener('popstate', (event) => {
+                wxGuideMask.style.display = 'none';
+            });
+
             // ===== Lightbox (Image Gallery) Logic =====
             const lightbox = document.getElementById('lightbox');
             const lightboxContent = lightbox.querySelector('.lightbox-content');
@@ -2582,14 +2640,25 @@
          */
         function openMapForPoi(event, poiId) {
             event.preventDefault();
-            // Search in the master list which contains all fetched POIs
             const poi = originalDistanceSortedPois.find(p => p.id === poiId);
-            if (poi) {
-                const mapUrl = getMapUrl(poi);
-                window.open(mapUrl, '_blank', 'noopener,noreferrer');
-            } else {
+            if (!poi) {
                 console.error('Could not find POI with ID:', poiId);
                 alert('抱歉，无法生成地图链接，未找到该地点的详细信息。');
+                return;
+            }
+
+            const deviceType = getDeviceType();
+            if (deviceType === 'wechat') {
+                const redirectUrl = `wx-redirect.html?poiId=${poi.id}`;
+                // Push state to change the URL for the "Open in Browser" action
+                // without navigating away from the current page.
+                history.pushState({ wxGuideMask: true }, "跳转指引", redirectUrl);
+                // Show the guide mask
+                document.getElementById('wx-guide-mask').style.display = 'flex';
+            } else {
+                // For all other devices (pc, ios, android), get the appropriate URL and open it.
+                const mapUrl = getMapUrl(poi);
+                window.open(mapUrl, '_blank', 'noopener,noreferrer');
             }
         }
     </script>
