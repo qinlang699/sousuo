@@ -947,7 +947,7 @@
         <div class="search-form">
             <div class="form-group">
                 <label for="locationKeyword">1.输入中心点关键字:</label>
-                <input type="text" id="locationKeyword" placeholder="例如：广州市广州塔" value="">
+                <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="">
             </div>
             <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -1548,9 +1548,9 @@
                 case 'android':
                     return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
                 case 'wechat':
-                    // In WeChat, direct to a guide page that instructs the user to open in an external browser.
-                    // The guide page itself handles the final redirection.
-                    return `wx-redirect.html?poiId=${poi.id}`;
+                    // For WeChat, create a hash-based URL for the history API.
+                    // This keeps the user on the same page and is more reliable.
+                    return `/#poiId=${poi.id}`;
                 case 'pc':
                 default:
                     // For PC, use the standard Gaode web page for the POI.
@@ -2215,6 +2215,18 @@
         
         // ===== 页面加载完成后的初始化 =====
         document.addEventListener('DOMContentLoaded', function() {
+            // New: Handle hash-based deep links on page load for WeChat redirection.
+            // This must be the very first thing that runs.
+            if (window.location.hash && window.location.hash.startsWith('#poiId=')) {
+                const poiId = window.location.hash.substring(7); // Remove '#poiId='
+                if (poiId) {
+                    const mapUrl = `https://www.amap.com/place/${poiId}`;
+                    // Redirect immediately, stopping any other script execution on this page.
+                    window.location.replace(mapUrl);
+                    return; 
+                }
+            }
+
             const locationKeywordInput = document.getElementById('locationKeyword');
             const totalCountInput = document.getElementById('totalCount');
             const increaseBtn = document.getElementById('increaseBtn');
