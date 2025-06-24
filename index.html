@@ -945,6 +945,33 @@
             margin-top: 50px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #restore-loader-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            flex-direction: column;
+            color: #333;
+            font-size: 18px;
+        }
+        #restore-loader-overlay::before {
+            content: '⚙️';
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+            animation: spin 1.5s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -1051,6 +1078,11 @@
         <p class="mask-text">
             请点击右上角菜单<br>选择"在浏览器打开"
         </p>
+    </div>
+
+    <!-- Loader for the restore-from-link functionality -->
+    <div id="restore-loader-overlay">
+        <p>正在根据链接自动还原搜索...<br>请稍候</p>
     </div>
 
     <script>
@@ -1807,11 +1839,16 @@
                     // Cache the result along with whether a city was matched
                     locationCache[locationKeyword] = { pois: poisToProcess, cityMatch: !!matchedCity };
                     
-                    // 手动流程：显示选项或直接处理
-                    if (poisToProcess.length > 1 || !matchedCity) {
-                        renderLocationChoices(poisToProcess, !matchedCity);
-                    } else {
+                    if (isAutomated) {
+                        // 自动化流程，直接选择第一个结果
                         processLocationPoi(poisToProcess[0], false);
+                    } else {
+                        // 手动流程：显示选项或直接处理
+                        if (poisToProcess.length > 1 || !matchedCity) {
+                            renderLocationChoices(poisToProcess, !matchedCity);
+                        } else {
+                            processLocationPoi(poisToProcess[0], false);
+                        }
                     }
                 } else {
                     statusDiv.innerHTML = `<div class="error">没有找到满足您要求的坐标</div>`;
@@ -2728,40 +2765,51 @@
          * @param {object} context - 包含所有搜索参数和目标POI ID的对象
          */
         async function restoreSearchAndScroll(context) {
-            const statusDiv = document.getElementById('locationStatus');
-            statusDiv.innerHTML = `<div class="info-prompt">正在根据链接自动还原搜索...</div>`;
+            const loader = document.getElementById('restore-loader-overlay');
+            loader.style.display = 'flex'; // Show loader
 
-            // 步骤1: 自动定位中心点
-            document.getElementById('locationKeyword').value = context.center_kw;
-            await searchLocationByKeyword(true); // 使用 true 以激活自动化模式
+            try {
+                const statusDiv = document.getElementById('locationStatus');
+                // statusDiv.innerHTML = `<div class="info-prompt">正在根据链接自动还原搜索...</div>`; // This is now handled by the overlay
 
-            // 检查中心点是否定位成功
-            const lon = document.getElementById('longitude').value;
-            if (!lon) {
-                statusDiv.innerHTML = `<div class="error">自动定位中心点 "${context.center_kw}" 失败，请手动搜索。</div>`;
-                return;
-            }
+                // 步骤1: 自动定位中心点
+                document.getElementById('locationKeyword').value = context.center_name;
+                await searchLocationByKeyword(true); // 使用 true 以激活自动化模式
 
-            // 步骤2: 填充其他搜索参数
-            document.getElementById('keywords').value = context.search_kw;
-            document.getElementById('radius').value = context.radius;
-            document.getElementById('totalCount').value = context.count;
+                // 检查中心点是否定位成功
+                const lon = document.getElementById('longitude').value;
+                if (!lon) {
+                    statusDiv.innerHTML = `<div class="error">自动定位中心点 "${context.center_name}" 失败，请手动搜索。</div>`;
+                    return;
+                }
 
-            // 步骤3: 执行周边搜索
-            await searchNearby();
+                // 步骤2: 填充其他搜索参数
+                document.getElementById('keywords').value = context.search_kw;
+                document.getElementById('radius').value = context.radius;
+                document.getElementById('totalCount').value = context.count;
 
-            // 步骤4: 滚动到目标POI并高亮显示
-            const targetElement = document.getElementById(`poi-item-${context.poiIdToScroll}`);
-            if (targetElement) {
-                // 滚动到视图中央，提供更好的上下文
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // 添加高亮效果，让用户能立刻注意到
-                targetElement.style.transition = 'background-color 1s ease-in-out';
-                targetElement.style.backgroundColor = '#e6f7ff'; // 使用主题蓝色
-                setTimeout(() => {
-                    targetElement.style.backgroundColor = ''; // 2.5秒后恢复原状
-                }, 2500);
+                // 步骤3: 执行周边搜索
+                await searchNearby();
+
+                // 步骤4: 滚动到目标POI并高亮显示
+                const targetElement = document.getElementById(`poi-item-${context.poiIdToScroll}`);
+                if (targetElement) {
+                    // 滚动到视图中央，提供更好的上下文
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // 添加高亮效果，让用户能立刻注意到
+                    targetElement.style.transition = 'background-color 1s ease-in-out';
+                    targetElement.style.backgroundColor = '#e6f7ff'; // 使用主题蓝色
+                    setTimeout(() => {
+                        targetElement.style.backgroundColor = ''; // 2.5秒后恢复原状
+                    }, 2500);
+                }
+            } catch (error) {
+                console.error('自动还原搜索时发生错误:', error);
+                const statusDiv = document.getElementById('locationStatus');
+                statusDiv.innerHTML = `<div class="error">自动还原搜索失败: ${error.message}</div>`;
+            } finally {
+                loader.style.display = 'none'; // Hide loader
             }
         }
     </script>
