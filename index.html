@@ -2299,6 +2299,7 @@
             const increaseBtn = document.getElementById('increaseBtn');
             const decreaseBtn = document.getElementById('decreaseBtn');
             const radiusInput = document.getElementById('radius');
+            const keywordsInput = document.getElementById('keywords');
 
             // 当用户修改中心点关键字时，立即隐藏下方的周边搜索区域和状态信息
             locationKeywordInput.addEventListener('input', function() {
@@ -2306,6 +2307,15 @@
                 document.getElementById('locationStatus').innerHTML = ''; // 同时清除旧的状态信息
                 document.getElementById('results').innerHTML = ''; // 新增: 清空地点列表结果
             });
+
+            // 新增：当其他搜索参数（半径、数量、关键字）变化时，也清空旧的搜索结果
+            const clearResultsOnChange = () => {
+                document.getElementById('results').innerHTML = '';
+            };
+
+            radiusInput.addEventListener('input', clearResultsOnChange);
+            totalCountInput.addEventListener('input', clearResultsOnChange);
+            keywordsInput.addEventListener('input', clearResultsOnChange);
             
             // 为"生成数量"输入框添加事件监听，自动校准为非负数
             totalCountInput.addEventListener('change', function() {
@@ -2324,6 +2334,7 @@
                     newValue = max;
                 }
                 totalCountInput.value = newValue;
+                clearResultsOnChange(); // 手动触发清除
             });
 
             // "生成数量" 减少按钮
@@ -2335,6 +2346,7 @@
                     newValue = min;
                 }
                 totalCountInput.value = newValue;
+                clearResultsOnChange(); // 手动触发清除
             });
 
             // 搜索半径输入框自动校准
