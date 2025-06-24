@@ -2225,6 +2225,21 @@
             // 由于微信和外部浏览器会话隔离，此方案无效。
             // 保留一个干净的启动流程。
 
+            // ===== 新增：处理从 /poi/ID 跳转过来的逻辑 =====
+            const path = window.location.pathname;
+            // 匹配 /poi/ followed by an ID (e.g., /poi/B0FFG86B7B)
+            const poiMatch = path.match(/^\/poi\/([A-Z0-9]+)$/i); 
+
+            if (poiMatch) {
+                const poiId = poiMatch[1];
+                // 使用 history.replaceState 将 URL 清理回根路径, 
+                // 这样用户刷新页面时不会重复触发加载。
+                // 这也让地址栏看起来更干净。
+                history.replaceState(null, '', '/');
+                handlePoiRedirect(poiId);
+            }
+            // ===== 处理跳转逻辑结束 =====
+
             const locationKeywordInput = document.getElementById('locationKeyword');
             const totalCountInput = document.getElementById('totalCount');
             const increaseBtn = document.getElementById('increaseBtn');
@@ -2655,9 +2670,9 @@
             const deviceType = getDeviceType();
 
             if (deviceType === 'wechat') {
-                // 在微信中，由于无法传递数据或直接跳转，
-                // 我们能做的最好的事就是清晰地指引用户。
-                // 因此，只显示指引浮层。
+                // 在微信中，使用 history.pushState 修改URL，然后显示指引
+                const newUrl = `/poi/${poi.id}`;
+                history.pushState({ poiId: poi.id }, '', newUrl);
                 document.getElementById('wx-guide-mask').style.display = 'flex';
             } else if (deviceType === 'ios' || deviceType === 'android') {
                 // For mobile browsers, attempt to open the deep link via a hidden iframe.
@@ -2676,6 +2691,48 @@
                 // For PC, open the web map in a new tab as before.
                 const mapUrl = getMapUrl(poi);
                 window.open(mapUrl, '_blank', 'noopener,noreferrer');
+            }
+        }
+
+        /**
+         * 新增：处理从特定POI链接跳转的函数
+         * @param {string} poiId - 高德POI的ID
+         */
+        async function handlePoiRedirect(poiId) {
+            const statusDiv = document.getElementById('locationStatus');
+            statusDiv.innerHTML = `<div class="info-prompt">正在根据链接加载地点信息...</div>`;
+            document.getElementById('nearby-search-section').style.display = 'none';
+
+            const url = new URL(CONFIG.SCF_URL);
+            url.searchParams.set('apiPath', 'v5/place/detail');
+            url.searchParams.set('id', poiId);
+            url.searchParams.set('show_fields', 'business,photos');
+
+            try {
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                
+                if (data.status === '1' && data.pois && data.pois.length > 0) {
+                    const poi = data.pois[0];
+                    
+                    // 将获取到的POI名称填入中心点输入框
+                    document.getElementById('locationKeyword').value = poi.name;
+                    
+                    // 直接使用获取到的POI信息设置中心点，并显示周边搜索区域
+                    processLocationPoi(poi);
+
+                    // 自动触发一次周边搜索，使用输入框中的默认或预设关键字
+                    // 为了更好的用户体验，延迟一小段时间再搜索
+                    setTimeout(() => {
+                        searchNearby();
+                    }, 100);
+
+                } else {
+                    statusDiv.innerHTML = `<div class="error">无法加载链接中的地点信息: ${data.info || '未找到该地点'}</div>`;
+                }
+            } catch (error) {
+                console.error('Failed to handle POI redirect:', error);
+                statusDiv.innerHTML = `<div class="error">加载链接信息时网络出错: ${error.message}</div>`;
             }
         }
     </script>
