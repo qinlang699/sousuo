@@ -2215,17 +2215,44 @@
         
         // ===== 页面加载完成后的初始化 =====
         document.addEventListener('DOMContentLoaded', function() {
-            // FINAL ROBUST SOLUTION: Use sessionStorage to handle WeChat redirection.
-            // This is immune to WeChat's URL caching quirks.
+            // FINAL ROBUST SOLUTION V2: Replay search context from sessionStorage.
+            // This is the most reliable way, based on user's excellent suggestion.
             // This must be the very first thing that runs.
-            const poiIdToRedirect = sessionStorage.getItem('redirectToPoi');
-            if (poiIdToRedirect) {
-                // A redirect is requested. Clear the flag immediately to prevent loops.
-                sessionStorage.removeItem('redirectToPoi');
-                // Redirect to the map page.
-                const mapUrl = `https://www.amap.com/place/${poiIdToRedirect}`;
-                window.location.replace(mapUrl);
-                return; // Stop all other script execution.
+            if (sessionStorage.getItem('replaySearch') === 'true') {
+                const location = sessionStorage.getItem('replayLocation');
+                const keywords = sessionStorage.getItem('replayKeywords');
+                const radius = sessionStorage.getItem('replayRadius');
+                const totalCount = sessionStorage.getItem('replayTotalCount');
+
+                // Clear all flags immediately to prevent loops
+                sessionStorage.removeItem('replaySearch');
+                sessionStorage.removeItem('replayLocation');
+                sessionStorage.removeItem('replayKeywords');
+                sessionStorage.removeItem('replayRadius');
+                sessionStorage.removeItem('replayTotalCount');
+
+                if (location && keywords) {
+                    // Populate the form fields with the stored context
+                    document.getElementById('locationKeyword').value = location;
+                    document.getElementById('keywords').value = keywords;
+                    document.getElementById('radius').value = radius || '5000';
+                    document.getElementById('totalCount').value = totalCount || '50';
+
+                    // Use an async IIFE to run the automated search sequence
+                    (async () => {
+                        console.log('Starting automated search replay...');
+                        await searchLocationByKeyword();
+                        // Check if location search was successful by seeing if the next section is visible
+                        if (document.getElementById('nearby-search-section').style.display !== 'none') {
+                            searchNearby();
+                        } else {
+                            console.error('Automated location search failed. Aborting replay.');
+                            alert('自动定位中心点失败，已中止自动搜索。');
+                        }
+                    })();
+                    // Stop further normal script execution
+                    return;
+                }
             }
 
             const locationKeywordInput = document.getElementById('locationKeyword');
@@ -2329,11 +2356,15 @@
             // ===== WX Mask Logic =====
             const wxGuideMask = document.getElementById('wx-guide-mask');
 
-            // Clicking the mask will hide it and clear the redirect flag.
+            // Clicking the mask will hide it and clear the replay search flags.
             wxGuideMask.addEventListener('click', () => {
                 wxGuideMask.style.display = 'none';
-                // Clear the redirect flag so a subsequent "Open in Browser" loads the main page.
-                sessionStorage.removeItem('redirectToPoi');
+                // Clear the search replay flags to cancel the action.
+                sessionStorage.removeItem('replaySearch');
+                sessionStorage.removeItem('replayLocation');
+                sessionStorage.removeItem('replayKeywords');
+                sessionStorage.removeItem('replayRadius');
+                sessionStorage.removeItem('replayTotalCount');
             });
 
             // ===== Lightbox (Image Gallery) Logic =====
@@ -2660,8 +2691,13 @@
             const deviceType = getDeviceType();
 
             if (deviceType === 'wechat') {
-                // Set a temporary flag in sessionStorage.
-                sessionStorage.setItem('redirectToPoi', poi.id);
+                // Store the entire search context for replaying in a new browser tab.
+                sessionStorage.setItem('replaySearch', 'true');
+                sessionStorage.setItem('replayLocation', document.getElementById('locationKeyword').value);
+                sessionStorage.setItem('replayKeywords', document.getElementById('keywords').value);
+                sessionStorage.setItem('replayRadius', document.getElementById('radius').value);
+                sessionStorage.setItem('replayTotalCount', document.getElementById('totalCount').value);
+                
                 // Show the guide mask.
                 document.getElementById('wx-guide-mask').style.display = 'flex';
             } else if (deviceType === 'ios' || deviceType === 'android') {
