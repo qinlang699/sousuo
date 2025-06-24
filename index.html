@@ -941,7 +941,7 @@
                         <button onclick="searchByCategory('超市')">超市/便利店</button>
                         <button onclick="searchByCategory('买药')">买药</button>
                         <button onclick="searchByCategory('蔬菜')">蔬菜</button>
-                        <button onclick="searchByCategory('酒店')">酒店</button>
+                        <button onclick="searchByCategory('宾馆酒店')">宾馆酒店</button>
                         <button onclick="searchByCategory('景点')">景点</button>
                         <button onclick="searchByCategory('咖啡')">咖啡</button>
                         <button onclick="searchByCategory('公共厕所')">公共厕所</button>
@@ -1132,7 +1132,7 @@
             '060704': ['水果', '水果店', '水果摊'],
             '060705': ['蔬菜', '菜市场'],
             '090601': ['买药', '药店', '药房'],
-            '100100|100101': ['酒店', '宾馆酒店', '高档酒店', '宾馆', '旅馆', '旅店'],
+            '100100|100101': ['宾馆酒店', '高档酒店', '宾馆', '旅馆', '旅店'],
             '110000': ['风景', '景点'],
             '080100': ['运动场所'],
             '080500|080300': ['休闲娱乐'],
@@ -1429,7 +1429,7 @@
                     displayType = '汽车销售';
                 }
                 
-                const mapUrl = getMapUrl(poi);
+                // const mapUrl = getMapUrl(poi); // This is now handled dynamically
                 const poiName = truncateString(poi.name || '未知地点', 20);
 
                 let photoHtml = '';
@@ -1474,7 +1474,7 @@
                 
                 html += `
                     <div class="poi-item">
-                        <a href="${mapUrl}" target="_blank" class="poi-name">${index + 1}. ${poiName}</a>
+                        <a href="#" onclick="openMapForPoi(event, '${poi.id}')" class="poi-name">${index + 1}. ${poiName}</a>
                         <div class="poi-info">
                             ${infoHtml}
                         </div>
@@ -1499,6 +1499,9 @@
             const deviceType = getDeviceType();
 
             switch (deviceType) {
+                case 'wechat':
+                    // 在微信中，必须使用网页链接，这个链接能引导用户在浏览器打开或直接在内置地图查看
+                    return `https://uri.amap.com/marker?position=${lon},${lat}&name=${poiName}&src=mypage&coordinate=gaode&callnative=1`;
                 case 'ios':
                     return `iosamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
                 case 'android':
@@ -2555,10 +2558,13 @@
 
         /**
          * Detects the type of device based on user agent.
-         * @returns {'ios' | 'android' | 'pc'}
+         * @returns {'wechat' | 'ios' | 'android' | 'pc'}
          */
         function getDeviceType() {
             const ua = navigator.userAgent.toLowerCase();
+            if (/micromessenger/.test(ua)) {
+                return 'wechat';
+            }
             if (/iphone|ipad|ipod/.test(ua)) {
                 return 'ios';
             }
@@ -2566,6 +2572,25 @@
                 return 'android';
             }
             return 'pc';
+        }
+
+        /**
+         * Dynamically generates map URL and opens it in a new tab.
+         * This ensures the device type is checked at the moment of click.
+         * @param {Event} event - The click event.
+         * @param {string} poiId - The ID of the POI.
+         */
+        function openMapForPoi(event, poiId) {
+            event.preventDefault();
+            // Search in the master list which contains all fetched POIs
+            const poi = originalDistanceSortedPois.find(p => p.id === poiId);
+            if (poi) {
+                const mapUrl = getMapUrl(poi);
+                window.open(mapUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                console.error('Could not find POI with ID:', poiId);
+                alert('抱歉，无法生成地图链接，未找到该地点的详细信息。');
+            }
         }
     </script>
 </body>
