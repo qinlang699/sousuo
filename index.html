@@ -258,11 +258,11 @@
             position: relative;
         }
 
-        /* The underline is now a pseudo-element of the static wrapper */
+        /* The underline is now a pseudo-element of the static wrapper with fixed position */
         .poi-name-wrapper::after {
             content: '';
             position: absolute;
-            bottom: -3px;
+            top: 100%; /* 使用固定的相对位置，不管文字有什么符号都保持在此位置 */
             left: 0;
             right: 0;
             height: 2px;
@@ -270,6 +270,7 @@
             box-shadow: 
                 1px 1px 0px #b0b0b0,
                 2px 2px 1px rgba(59, 59, 59, 0.3);
+            z-index: 1; /* 确保下划线层级正确 */
         }
 
         /* New class to keep the last clicked item blue */
