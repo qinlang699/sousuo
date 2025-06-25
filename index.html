@@ -1114,7 +1114,7 @@
                         <button onclick="searchByCategory('午餐')">午餐/晚餐</button>
                     </div>
                     <div class="category-row">
-                        <button onclick="searchByCategory('电影院')">电影/剧院</button>
+                        <button onclick="searchByCategory('电影剧院')">电影/剧院</button>
                         <button onclick="searchByCategory('冷饮')">冷饮/饮品</button>
                         <button onclick="searchByCategory('超市')">超市/便利店</button>
                         <button onclick="searchByCategory('买药')">买药</button>
@@ -1326,7 +1326,7 @@
             '110000': ['风景', '景点'],
             '080100': ['运动场所'],
             '080500|080300': ['休闲娱乐'],
-            '080600': ['电影院'],
+            '080600': ['电影院', '电影剧院'],
             '071100|090201': ['美容美发'],
             '200300': ['公共厕所'],
         };
@@ -1647,7 +1647,7 @@
                             </div>`;
                 };
 
-                let infoHtml = `<div class="poi-info-line"><button class="address-btn" data-address="${escapedAddress}"> 详细地址 </button></div>`;
+                let infoHtml = ``;
                 infoHtml += createInfoLine('📞电话:', formatPhoneNumber(poi.business?.tel));
                 infoHtml += createInfoLine('🏠类型:', displayType);
                 infoHtml += createInfoLine('📏直线距离:', poi.distance ? poi.distance + '米' : '距离未知');
@@ -1661,6 +1661,9 @@
                 if (poi.business?.cost) {
                     infoHtml += createInfoLine('💰人均:', poi.business.cost + '元');
                 }
+                
+                // 将详细地址按钮移到最后一行
+                infoHtml += `<div class="poi-info-line"><button class="address-btn" data-address="${escapedAddress}"> 详细地址 </button></div>`;
                 
                 html += `
                     <div class="poi-item" id="poi-item-${poi.id}">
