@@ -202,32 +202,87 @@
             margin-bottom: 10px;
             border-radius: 4px;
             border-left: 4px solid #1890ff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 添加立体阴影 */
-            /* transition: box-shadow 0.3s ease, transform 0.3s ease; -- Animation removed as requested */
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1); /* 增强立体阴影效果 */
+            transition: box-shadow 0.3s ease; /* 只添加阴影过渡效果 */
             position: relative; /* 为绝对定位的子元素提供容器 */
         }
         
         .poi-item:hover {
-            /* All hover animations removed */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2), 0 3px 5px rgba(0,0,0,0.1); /* 悬停时增强阴影 */
         }
         
         .poi-name {
+            /* This is the <a> tag, now a container for positioning and click handling */
+            display: flex;
+            align-items: baseline;
             font-size: 16px;
             font-weight: bold;
-            color: #333;
-            text-decoration: none; /* Remove underline for link */
-            /* The following styles make the name an absolutely positioned overlay */
+            text-decoration: none;
             position: absolute;
             top: 15px; /* Align with parent's padding */
             left: 15px; /* Align with parent's padding */
             right: 175px; /* Leave space for the 150px photo + 10px gap + 15px padding */
             white-space: nowrap; /* Force single-line display */
             z-index: 2; /* Ensure it's on top of other info but below image */
-            transition: color 0.2s; /* Smooth color transition on hover */
         }
         
-        .poi-name:hover {
-            color: #1890ff; /* Change color on hover for better UX */
+        .poi-number {
+            color: #444;
+            margin-right: 0.25em;
+            /* The number does not get any 3D styling */
+        }
+        
+        .poi-name-content {
+            /* This span contains the text and gets all the visual styling */
+            position: relative;
+            color: #444;
+            text-shadow: 
+                1px 1px 0px #b0b0b0,
+                2px 2px 1px rgba(59, 59, 59, 0.3);
+            transition: transform 0.1s ease-out, text-shadow 0.1s ease-out; /* 仅对变换和阴影应用过渡 */
+            display: inline-block; /* 使变换效果仅影响文字内容 */
+        }
+
+        .poi-name-content::after {
+            /* 移除content和所有属性，不再显示此下划线 */
+            content: none;
+            display: none;
+        }
+
+        .poi-name:hover .poi-name-content {
+            color: #1890ff; /* Keep hover color change for desktop users */
+        }
+        
+        /* This is a new static wrapper for the name and its underline */
+        .poi-name-wrapper {
+            position: relative;
+        }
+
+        /* The underline is now a pseudo-element of the static wrapper */
+        .poi-name-wrapper::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #444;
+            box-shadow: 
+                1px 1px 0px #b0b0b0,
+                2px 2px 1px rgba(59, 59, 59, 0.3);
+        }
+
+        /* New class to keep the last clicked item blue */
+        .poi-name-content.selected {
+            color: #1890ff;
+        }
+        
+        .poi-name-content.pressed {
+            transform: translate(0, 2px); /* 向下移动2px */
+            /* color is handled by .selected, this just handles press shadow */
+            text-shadow: 
+                1px 1px 0px #f5f5f5,
+                1px 1px 2px rgba(0,0,0,0.4);
         }
         
         .poi-info {
@@ -1186,6 +1241,7 @@
         let currentPhotoIndex = 0; // Index of the photo shown in the lightbox
         let isLightboxAnimating = false; // Animation lock
         const preventNavSwipe = (e) => e.preventDefault(); // For mobile swipe fix
+        let linkClicked = false; // Flag to prevent double event firing
 
         const CONFIG = {
             // SCF_URL 已替换为您提供的云函数地址
@@ -1607,7 +1663,12 @@
                 
                 html += `
                     <div class="poi-item" id="poi-item-${poi.id}">
-                        <a href="#" onclick="openMapForPoi(event, '${poi.id}')" class="poi-name">${index + 1}. ${poiName}</a>
+                        <a href="#" onclick="handlePoiClick(event, '${poi.id}')" class="poi-name">
+                            <span class="poi-number">${index + 1}. </span>
+                            <span class="poi-name-wrapper">
+                                <span class="poi-name-content">${poiName}</span>
+                            </span>
+                        </a>
                         <div class="poi-info">
                             ${infoHtml}
                         </div>
@@ -1637,12 +1698,11 @@
                 case 'android':
                     return `androidamap://viewMap?poiname=${poiName}&lat=${lat}&lon=${lon}&dev=0`;
                 case 'wechat':
-                    // For WeChat, create a hash-based URL for the history API.
-                    // This keeps the user on the same page and is more reliable.
+                    // 微信中使用特殊URL，会触发微信引导蒙层
                     return `/#poiId=${poi.id}`;
                 case 'pc':
                 default:
-                    // For PC, use the standard Gaode web page for the POI.
+                    // PC端使用标准高德地图网页
                     return `https://www.amap.com/place/${poi.id}`;
             }
         }
@@ -2777,17 +2837,23 @@
          */
         function openMapForPoi(event, poiId) {
             event.preventDefault();
+            // 防止重复点击
+            if(linkClicked) return;
+            linkClicked = true;
+            
             const poi = originalDistanceSortedPois.find(p => p.id === poiId);
             if (!poi) {
                 console.error('Could not find POI with ID:', poiId);
                 alert('抱歉，无法生成地图链接，未找到该地点的详细信息。');
+                linkClicked = false;
                 return;
             }
 
             const deviceType = getDeviceType();
+            const mapUrl = getMapUrl(poi);
 
             if (deviceType === 'wechat') {
-                // 在微信中，使用 history.pushState 修改URL，然后显示指引
+                // 在微信中，使用 history.pushState 修改URL，然后显示引导蒙层
                 const centerName = document.getElementById('locationKeyword').value;
                 const centerLon = document.getElementById('longitude').value;
                 const centerLat = document.getElementById('latitude').value;
@@ -2803,29 +2869,52 @@
                 params.set('radius', radius);
                 params.set('count', count);
                 
-                
                 const newUrl = `/poi/${poi.id}?${params.toString()}`;
 
                 history.pushState({ poiId: poi.id }, '', newUrl);
                 document.getElementById('wx-guide-mask').style.display = 'flex';
+
             } else if (deviceType === 'ios' || deviceType === 'android') {
-                // For mobile browsers, attempt to open the deep link via a hidden iframe.
-                // This triggers the "Open in App?" prompt without leaving the current page.
-                const mapUrl = getMapUrl(poi);
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = mapUrl; // mapUrl is the deep link e.g., 'iosamap://...'
-                document.body.appendChild(iframe);
-                setTimeout(() => {
-                    if (iframe.parentNode) {
-                        iframe.parentNode.removeChild(iframe);
-                    }
-                }, 500);
-            } else { // This must be 'pc'
-                // For PC, open the web map in a new tab as before.
-                const mapUrl = getMapUrl(poi);
+                // 在移动设备上尝试打开高德地图APP
+                window.location.href = mapUrl;
+
+            } else { // PC端
                 window.open(mapUrl, '_blank', 'noopener,noreferrer');
             }
+            
+            // 500ms后重置标记，防止重复点击
+            setTimeout(() => {
+                linkClicked = false;
+            }, 500);
+        }
+
+        /**
+         * NEW: Orchestrates the click animation and delayed navigation.
+         * This solves the conflict between CSS transform and click events.
+         * @param {Event} event
+         * @param {string} poiId
+         */
+        async function handlePoiClick(event, poiId) {
+            event.preventDefault();
+            const contentElement = event.currentTarget.querySelector('.poi-name-content');
+
+            // 移除所有已选择和按下效果，确保无闪烁
+            document.querySelectorAll('.poi-name-content.selected, .poi-name-content.pressed').forEach(item => {
+                if (item !== contentElement) {
+                    item.classList.remove('selected', 'pressed');
+                }
+            });
+            
+            // 为当前点击项添加选中样式
+            contentElement.classList.add('selected');
+            contentElement.classList.add('pressed');
+
+            // 在动画完成后移除pressed效果
+            await sleep(200);
+            contentElement.classList.remove('pressed');
+
+            // 触发导航
+            openMapForPoi(event, poiId);
         }
 
         /**
