@@ -1171,7 +1171,7 @@
                     <div class="form-group">
                         <label for="totalCount">生成数量:</label>
                         <div class="input-stepper">
-                            <input type="number" id="totalCount" value="50" min="0" max="2500" placeholder="要显示的结果数量">
+                            <input type="number" id="totalCount" value="50" min="0" max="200" placeholder="要显示的结果数量">
                             <div class="stepper-buttons">
                                 <button id="increaseBtn" class="stepper-btn" aria-label="增加数量">▲</button>
                                 <button id="decreaseBtn" class="stepper-btn" aria-label="减少数量">▼</button>
@@ -1233,6 +1233,7 @@
         };
         let locationChoices = []; // 新增: 用于存储多个中心点选项
         let lastLocationKeyword = ''; // 新增: 用于跟踪上一次的中心点关键字
+        let lastUsedSearchParams = {}; // 新增: 用于存储上次成功搜索的参数
         const CHINESE_CITIES = [
             '北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区',
             '哈尔滨市', '齐齐哈尔市', '鸡西市', '鹤岗市', '双鸭山市', '大庆市', '伊春市', '佳木斯市', '七台河市', '牡丹江市', '黑河市', '绥化市', '大兴安岭地区',
@@ -2089,7 +2090,7 @@
                     listToDisplay = cachedSortedResults[currentDisplaySort];
                 }
 
-                displayResults(cached.aggregatedData, cached.pagesFetched, listToDisplay, cached.rawFetchedCount, cached.isPoiTypeSearch, true);
+                displayResults(cached.aggregatedData, cached.pagesFetched, listToDisplay, cached.rawFetchedCount, cached.isPoiTypeSearch, true, params);
                 return; // 命中缓存，立即返回
             }
             
@@ -2183,7 +2184,7 @@
                 };
                 searchCache[cacheKey] = dataToCache;
                 
-                displayResults(aggregatedData, pagesToDisplay, cachedSortedResults['rating'], rawFetchedCount, isPoiTypeSearch, false);
+                displayResults(aggregatedData, pagesToDisplay, cachedSortedResults['rating'], rawFetchedCount, isPoiTypeSearch, false, params);
 
             } catch (error) {
                 console.error('❌ 请求失败:', error);
@@ -2261,7 +2262,7 @@
         /**
          * 显示搜索结果
          */
-        function displayResults(data, pagesFetched, initialPois, rawFetchedCount, isPoiTypeSearch, isFromCache = false) {
+        function displayResults(data, pagesFetched, initialPois, rawFetchedCount, isPoiTypeSearch, isFromCache = false, searchParams = null) {
             if (!isFromCache) {
                 // console.log('📋 原始返回数据:', JSON.stringify(data, null, 2));
             }
@@ -2282,6 +2283,12 @@
             if (oldRawData) oldRawData.remove();
 
             if (data.status === '1') {
+                if (searchParams) {
+                    lastUsedSearchParams = {
+                        radius: searchParams.radius,
+                        count: searchParams.requested_count
+                    };
+                }
                 const displayedCount = initialPois.length;
                 const searchMessage = isPoiTypeSearch ? '类型搜索成功' : '关键字搜索成功';
                 
@@ -2449,20 +2456,25 @@
                 document.getElementById('results').innerHTML = ''; // 新增: 清空地点列表结果
             });
 
-            // 新增：当其他搜索参数（半径、数量、关键字）变化时，也清空旧的搜索结果
+            // 新增：当周边搜索关键字变化时，也清空旧的搜索结果
             const clearResultsOnChange = () => {
                 document.getElementById('results').innerHTML = '';
             };
 
-            radiusInput.addEventListener('input', clearResultsOnChange);
-            totalCountInput.addEventListener('input', clearResultsOnChange);
             keywordsInput.addEventListener('input', clearResultsOnChange);
             
-            // 为"生成数量"输入框添加事件监听，自动校准为非负数
+            // 为"生成数量"输入框添加事件监听，实时校准
+            totalCountInput.addEventListener('input', function() {
+                const max = parseInt(this.max, 10);
+                if (parseInt(this.value, 10) > max) {
+                    this.value = max;
+                }
+            });
+            // 失焦时，确保值不为空或小于最小值
             totalCountInput.addEventListener('change', function() {
-                let value = parseInt(this.value, 10);
-                if (isNaN(value) || value < 0) {
-                    this.value = 0;
+                const min = parseInt(this.min, 10);
+                if (this.value === '' || parseInt(this.value, 10) < min) {
+                    this.value = min;
                 }
             });
 
@@ -2475,7 +2487,6 @@
                     newValue = max;
                 }
                 totalCountInput.value = newValue;
-                clearResultsOnChange(); // 手动触发清除
             });
 
             // "生成数量" 减少按钮
@@ -2487,28 +2498,25 @@
                     newValue = min;
                 }
                 totalCountInput.value = newValue;
-                clearResultsOnChange(); // 手动触发清除
             });
 
             // 搜索半径输入框自动校准
-            radiusInput.addEventListener('change', function() {
-                let value = parseInt(this.value, 10);
-                const min = parseInt(this.min, 10);
+            // 为"搜索半径"输入框添加事件监听，实时校准
+            radiusInput.addEventListener('input', function() {
                 const max = parseInt(this.max, 10);
-
-                if (isNaN(value)) {
-                    this.value = min; // 如果输入不是数字，则重置为最小值
-                    return;
-                }
-                
-                value = Math.floor(value);
-
-                if (value < min) {
-                    this.value = min;
-                } else if (value > max) {
+                if (parseInt(this.value, 10) > max) {
                     this.value = max;
+                }
+            });
+            // 失焦时，确保值不为空、小于最小值或为小数
+            radiusInput.addEventListener('change', function() {
+                const min = parseInt(this.min, 10);
+                let value = parseInt(this.value, 10);
+
+                if (isNaN(value) || value < min) {
+                    this.value = min;
                 } else {
-                    this.value = value;
+                    this.value = Math.floor(value); // 取整
                 }
             });
 
@@ -2931,8 +2939,10 @@
                 const centerLon = document.getElementById('longitude').value;
                 const centerLat = document.getElementById('latitude').value;
                 const searchKw = document.getElementById('keywords').value;
-                const radius = document.getElementById('radius').value;
-                const count = document.getElementById('totalCount').value;
+                
+                // 使用上次搜索时记录的参数，如果记录不存在，则回退到当前输入框的值
+                const radius = lastUsedSearchParams.radius !== undefined ? lastUsedSearchParams.radius : document.getElementById('radius').value;
+                const count = lastUsedSearchParams.count !== undefined ? lastUsedSearchParams.count : document.getElementById('totalCount').value;
 
                 const params = new URLSearchParams();
                 params.set('center_name', centerName);
