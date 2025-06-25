@@ -341,6 +341,30 @@
             line-height: 1.5;
             user-select: all;
             -webkit-user-select: all;
+            touch-action: none; /* 防止触摸事件干扰长按 */
+        }
+        
+        /* 复制成功提示 */
+        .copy-toast {
+            position: fixed;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: transparent; /* 完全透明背景 */
+            color: black; /* 黑色文字 */
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 1020;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none; /* 防止点击穿透 */
+            text-shadow: 0 0 5px rgba(255,255,255,0.7); /* 文字阴影提高可读性 */
+        }
+        
+        .copy-toast.show {
+            opacity: 1;
         }
 
         .location-choice {
@@ -1621,7 +1645,7 @@
                 }
                 
                 // const mapUrl = getMapUrl(poi); // This is now handled dynamically
-                const poiName = truncateString(poi.name || '未知地点', 20);
+                const poiName = truncateString(poi.name || '未知地点', 28);//最多显示28个字符
 
                 let photoHtml = '';
                 if (poi.photos && poi.photos.length > 0) {
@@ -2718,6 +2742,15 @@
 
             function createAddressPopover(button) {
                 const oldPopover = document.querySelector('.address-popover');
+                let copyToast = document.getElementById('copy-toast');
+
+                if (!copyToast) {
+                    copyToast = document.createElement('div');
+                    copyToast.id = 'copy-toast';
+                    copyToast.className = 'copy-toast';
+                    copyToast.textContent = '详细地址已复制';
+                    document.body.appendChild(copyToast);
+                }
 
                 // If a popover exists and it's for the same button, just remove it and we're done.
                 if (oldPopover && oldPopover._ownerButton === button) {
@@ -2741,6 +2774,34 @@
                 popover.textContent = address;
                 popover._ownerButton = button; // Link the popover to its button
 
+                // 移动端长按复制功能
+                if (getDeviceType() !== 'pc') {
+                    // 长按复制功能
+                    let touchTimer;
+                    const startCopyTimer = () => {
+                        touchTimer = setTimeout(() => {
+                            navigator.clipboard.writeText(address).then(() => {
+                                // 显示复制成功提示
+                                copyToast.classList.add('show');
+                                setTimeout(() => {
+                                    copyToast.classList.remove('show');
+                                }, 1500);
+                                
+                                // 关闭弹窗
+                                popover.remove();
+                            });
+                        }, 500); // 长按半秒触发复制
+                    };
+
+                    const clearCopyTimer = () => {
+                        clearTimeout(touchTimer);
+                    };
+
+                    popover.addEventListener('touchstart', startCopyTimer);
+                    popover.addEventListener('touchend', clearCopyTimer);
+                    popover.addEventListener('touchcancel', clearCopyTimer);
+                }
+
                 // Stop the popover from closing when clicking inside it
                 popover.addEventListener('click', e => e.stopPropagation());
                 
@@ -2750,6 +2811,12 @@
                 const btnRect = button.getBoundingClientRect();
                 let top = btnRect.bottom + 8;
                 let left = btnRect.left;
+                
+                // 确保在移动端不会超出屏幕边缘
+                const rightEdge = left + popover.offsetWidth;
+                if (rightEdge > window.innerWidth - 10) {
+                    left = Math.max(10, window.innerWidth - 10 - popover.offsetWidth);
+                }
                 
                 popover.style.top = `${top}px`;
                 popover.style.left = `${left}px`;
