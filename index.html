@@ -1272,8 +1272,9 @@
         let linkClicked = false; // Flag to prevent double event firing
 
         const CONFIG = {
-            // SCF_URL 已替换为您提供的云函数地址
-            SCF_URL: 'https://1364541279-enva6v5vqu.ap-shanghai.tencentscf.com',
+            // 高德地图API基础URL
+            GAODE_BASE_URL: 'https://restapi.amap.com',
+            GAODE_KEY: 'dcfb48c0f9cb749e59c5031e83cb6e95',
             
             // 默认参数 - 改为直接获取包含图片在内的所有需要的信息
             DEFAULT_PARAMS: {
@@ -1283,6 +1284,35 @@
         };
         
         // ===== 主要功能函数 =====
+        
+        /**
+         * 调用高德地图API的通用函数
+         * @param {string} apiPath - API路径，如 'v5/place/around'
+         * @param {Object} params - 查询参数
+         * @returns {Promise<Object>} - API响应数据
+         */
+        async function callGaodeAPI(apiPath, params = {}) {
+            // 添加API Key到参数中
+            const queryParams = {
+                ...params,
+                key: CONFIG.GAODE_KEY
+            };
+            
+            // 构建URL
+            const url = `${CONFIG.GAODE_BASE_URL}/${apiPath}?${new URLSearchParams(queryParams).toString()}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('高德API调用失败:', error);
+                throw new Error(`API调用失败: ${error.message}`);
+            }
+        }
         
         /**
          * 等待指定毫秒数
@@ -1952,21 +1982,18 @@
                 }
             }
             
-            const url = new URL(CONFIG.SCF_URL);
-            url.searchParams.set('apiPath', 'v5/place/text'); 
-            url.searchParams.set('keywords', locationKeyword);
-            url.searchParams.set('page_num', '1');
-            url.searchParams.set('page_size', '5'); // Always fetch up to 5 results
+            const params = {
+                keywords: locationKeyword,
+                page_num: '1',
+                page_size: '5' // Always fetch up to 5 results
+            };
 
             if (matchedCity) {
-                url.searchParams.set('region', matchedCity);
+                params.region = matchedCity;
             }
 
-            locationSearchUrl = url.toString(); // 保存URL
-
             try {
-                const response = await fetch(url.toString());
-                const data = await response.json();
+                const data = await callGaodeAPI('v5/place/text', params);
                 let poisToProcess = (data.status === '1' && data.pois) ? data.pois : [];
 
                 // If a city was matched, strictly filter results on the client-side
@@ -2121,10 +2148,9 @@
                         keywords: finalKeywords
                     };
                     
-                    const url = buildRequestUrl(currentParams);
+                    const requestParams = buildRequestParams(currentParams);
 
-                    const response = await fetch(url);
-                    const data = await response.json();
+                    const data = await callGaodeAPI('v5/place/around', requestParams);
                     
                     if (data.status !== '1') {
                         finalStatus = data.status;
@@ -2229,11 +2255,11 @@
         }
         
         /**
-         * 构建请求URL
+         * 构建请求参数
          */
-        function buildRequestUrl(params) {
+        function buildRequestParams(params) {
             // 基础参数，不包含keywords和types，避免污染
-            const baseParams = {
+            const requestParams = {
                 location: params.location,
                 radius: params.radius,
                 page_num: params.page_num,
@@ -2242,21 +2268,14 @@
                 ...CONFIG.DEFAULT_PARAMS
             };
 
-            const url = new URL(CONFIG.SCF_URL);
-            const urlParams = new URLSearchParams(baseParams);
-
-            // 告诉云函数目标路径
-            urlParams.set('apiPath', 'v5/place/around');
-
             // 根据最终确定的参数，只添加其中一个，确保请求纯粹性
             if (params.types) {
-                urlParams.set('types', params.types);
+                requestParams.types = params.types;
             } else if (params.keywords) {
-                urlParams.set('keywords', params.keywords);
+                requestParams.keywords = params.keywords;
             }
             
-            url.search = urlParams.toString();
-            return url.toString();
+            return requestParams;
         }
         
         /**
@@ -2618,14 +2637,13 @@
             }
 
             async function fetchPoiDetails(poiId) {
-                const url = new URL(CONFIG.SCF_URL);
-                url.searchParams.set('apiPath', 'v5/place/detail');
-                url.searchParams.set('id', poiId);
-                url.searchParams.set('show_fields', 'photos');
+                const params = {
+                    id: poiId,
+                    show_fields: 'photos'
+                };
 
                 try {
-                    const response = await fetch(url.toString());
-                    const data = await response.json();
+                    const data = await callGaodeAPI('v5/place/detail', params);
                     if (data.status === '1' && data.pois && data.pois.length > 0) {
                         const detailPoi = data.pois[0];
                         // If we got a more complete list of photos, update the gallery
