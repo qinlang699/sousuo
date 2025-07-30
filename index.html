@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高德地图周边搜索</title>
-    
-    <!-- SEO and Social Sharing Tags -->
     <meta property="og:title" content="高德地图周边搜索" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://qinlang699.cn/" />
@@ -13,7 +11,9 @@
     <meta property="og:description" content="一个快速、强大的高德地图周边信息搜索工具，帮您轻松找到目的地。" />
 
     <style>
-        /* For Webkit browsers (Chrome, Safari, Edge) */
+        /* ===============================================
+           全局样式设置
+           =============================================== */
         ::-webkit-scrollbar {
             width: 12px;
         }
@@ -27,12 +27,11 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-        /* For Firefox */
         html {
-            scrollbar-width: auto; /* 'auto' or 'thin' */
-            scrollbar-color: #a9a9a9 #f1f1f1; /* thumb and track color */
-            overflow-y: scroll; /* 始终显示滚动条，防止页面内容变化时宽度抖动 */
-            -webkit-overflow-scrolling: touch; /* 为移动设备添加全局惯性滚动 */
+            scrollbar-width: auto;
+            scrollbar-color: #a9a9a9 #f1f1f1;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
         }
         
         * {
@@ -41,24 +40,21 @@
         }
         
         :root {
-            /*
-             * @variable --lightbox-edge-area-size
-             * 控制全屏图片查看器边缘可关闭区域的大小。
-             * - 在手机竖屏等窄屏模式下，它定义了上下关闭栏的高度。
-             * - 在电脑或手机横屏等宽屏模式下，它定义了左右关闭栏的宽度。
-             */
             --lightbox-edge-area-size: 80px;
         }
-        
+
+        /* ===============================================
+           基础布局样式
+           =============================================== */
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
             margin: 0;
             padding: 20px;
             background-color: #f5f5f5;
-            min-height: 100vh; /* 确保body覆盖整个视口高度，防止底部白条 */
-            box-sizing: border-box; /* 将padding和border计入总高度/宽度 */
-            display: flex; /* 使用Flexbox布局 */
-            flex-direction: column; /* 垂直排列子元素 */
+            min-height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
         
         .container {
@@ -68,11 +64,11 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             max-width: 1200px;
             margin: 0 auto;
-            flex: 1; /* 让 container 填充剩余的垂直空间 */
-            display: flex; /* 同样使用Flexbox，以便内部元素可以更好地控制 */
-            flex-direction: column; /* 内部元素垂直排列 */
-            width: 100%; /* 配合 max-width 和 margin: auto 使用 */
-            box-sizing: border-box; /* 确保 padding 和 border 在计算内 */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         h1 {
@@ -80,28 +76,31 @@
             text-align: center;
             margin-bottom: 30px;
         }
-        
+
+        /* ===============================================
+           搜索表单样式
+           =============================================== */
         .search-form {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-            text-align: center; /* 仅中心对齐作为直接子元素的按钮 */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.08); /* 添加立体阴影 */
-            transition: box-shadow 0.3s ease; /* 添加过渡效果 */
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            transition: box-shadow 0.3s ease;
         }
         
         .search-form:hover {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.12); /* 悬浮时阴影更明显 */
+            box-shadow: 0 6px 12px rgba(0,0,0,0.12);
         }
         
         #locationStatus {
-            text-align: left; /* 确保地理编码成功后的状态信息是左对齐的 */
+            text-align: left;
         }
         
         .form-group {
             margin-bottom: 15px;
-            text-align: left; /* 覆盖父级的居中对齐，确保标签和输入框左对齐 */
+            text-align: left;
         }
         
         label {
@@ -120,7 +119,6 @@
             box-sizing: border-box;
         }
         
-        /* Custom styles for radius and totalCount inputs */
         #radius, .input-stepper {
             max-width: 120%;
         }
@@ -136,23 +134,25 @@
         }
         
         .form-row.form-row-tight {
-            justify-content: center; /* Center the compact items within the row */
-            gap: 20px; /* Increased gap to add more space between items */
+            justify-content: center;
+            gap: 20px;
         }
 
-        /* For rows that should not have flexible, growing children */
         .form-row.form-row-tight .form-group {
-            flex: none; /* Override flex: 1 to make items shrink to content width */
+            flex: none;
         }
 
         .form-row .form-group {
             flex: 1;
         }
-        
+
+        /* ===============================================
+           按钮样式
+           =============================================== */
         button {
             background: #1890ff;
             color: white;
-            padding: 12px 20px; /* 减小了左右内边距，使按钮变窄 */
+            padding: 12px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -176,12 +176,15 @@
             cursor: not-allowed;
             border-color: #096dd9;
         }
-        
+
+        /* ===============================================
+           结果显示区域
+           =============================================== */
         .results {
             margin-top: 20px;
-            flex: 1; /* 填充剩余空间 */
-            overflow-y: auto; /* 如果内容溢出，则显示滚动条 */
-            -webkit-overflow-scrolling: touch; /* 为iOS设备添加惯性滚动 */
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .result-section {
@@ -195,75 +198,72 @@
             margin-top: 0;
             color: #1890ff;
         }
-        
+
+        /* ===============================================
+           POI列表项样式
+           =============================================== */
         .poi-item {
             background: #fafafa;
             padding: 15px;
             margin-bottom: 10px;
             border-radius: 4px;
             border-left: 4px solid #1890ff;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1); /* 增强立体阴影效果 */
-            transition: box-shadow 0.3s ease; /* 只添加阴影过渡效果 */
-            position: relative; /* 为绝对定位的子元素提供容器 */
-            min-height: 175px; /* 确保电脑端足够高度包含右侧图片 */
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+            transition: box-shadow 0.3s ease;
+            position: relative;
+            min-height: 175px;
         }
         
         .poi-item:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2), 0 3px 5px rgba(0,0,0,0.1); /* 悬停时增强阴影 */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2), 0 3px 5px rgba(0,0,0,0.1);
         }
         
         .poi-name {
-            /* This is the <a> tag, now a container for positioning and click handling */
             display: flex;
             align-items: baseline;
             font-size: 16px;
             font-weight: bold;
             text-decoration: none;
             position: absolute;
-            top: 15px; /* Align with parent's padding */
-            left: 15px; /* Align with parent's padding */
-            right: 175px; /* Leave space for the 150px photo + 10px gap + 15px padding */
-            white-space: nowrap; /* Force single-line display */
-            z-index: 2; /* Ensure it's on top of other info but below image */
+            top: 15px;
+            left: 15px;
+            right: 175px;
+            white-space: nowrap;
+            z-index: 2;
         }
         
         .poi-number {
             color: #444;
             margin-right: 0.25em;
-            /* The number does not get any 3D styling */
         }
         
         .poi-name-content {
-            /* This span contains the text and gets all the visual styling */
             position: relative;
             color: #444;
             text-shadow: 
                 1px 1px 0px #b0b0b0,
                 2px 2px 1px rgba(59, 59, 59, 0.3);
-            transition: transform 0.1s ease-out, text-shadow 0.1s ease-out; /* 仅对变换和阴影应用过渡 */
-            display: inline-block; /* 使变换效果仅影响文字内容 */
+            transition: transform 0.1s ease-out, text-shadow 0.1s ease-out;
+            display: inline-block;
         }
 
         .poi-name-content::after {
-            /* 移除content和所有属性，不再显示此下划线 */
             content: none;
             display: none;
         }
 
         .poi-name:hover .poi-name-content {
-            color: #1890ff; /* Keep hover color change for desktop users */
+            color: #1890ff;
         }
         
-        /* This is a new static wrapper for the name and its underline */
         .poi-name-wrapper {
             position: relative;
         }
 
-        /* The underline is now a pseudo-element of the static wrapper with fixed position */
         .poi-name-wrapper::after {
             content: '';
             position: absolute;
-            top: 100%; /* 使用固定的相对位置，不管文字有什么符号都保持在此位置 */
+            top: 100%;
             left: 0;
             right: 0;
             height: 2px;
@@ -271,17 +271,15 @@
             box-shadow: 
                 1px 1px 0px #b0b0b0,
                 2px 2px 1px rgba(59, 59, 59, 0.3);
-            z-index: 1; /* 确保下划线层级正确 */
+            z-index: 1;
         }
 
-        /* New class to keep the last clicked item blue */
         .poi-name-content.selected {
             color: #1890ff;
         }
         
         .poi-name-content.pressed {
-            transform: translate(0, 2px); /* 向下移动2px */
-            /* color is handled by .selected, this just handles press shadow */
+            transform: translate(0, 2px);
             text-shadow: 
                 1px 1px 0px #f5f5f5,
                 1px 1px 2px rgba(0,0,0,0.4);
@@ -290,21 +288,20 @@
         .poi-info {
             color: #666;
             font-size: 14px;
-            padding-right: 165px; /* 为右侧图片留出空间 */
-            margin-top: 25px; /* Add margin to push it below the absolute .poi-name */
-            line-height: 1.6; /* Apply consistent line-height to all lines */
+            padding-right: 165px;
+            margin-top: 25px;
+            line-height: 1.6;
         }
         
-        /* Reverted the previous attempt and using hanging indent */
         .poi-info-line {
             display: flex;
             align-items: flex-start;
-            /* padding-left: 1.7em; -- Replaced by flexbox */
-            /* text-indent: -1.7em; -- Replaced by flexbox */
-            margin-bottom: 2px; /* Small gap between lines */
+            margin-bottom: 2px;
         }
-        
-        /* New styles for the address button and its popover */
+
+        /* ===============================================
+           地址按钮与弹窗
+           =============================================== */
         .address-btn {
             background: #1890ff;
             color: white;
@@ -330,29 +327,28 @@
             transition: none;
         }
         .address-popover {
-            position: fixed; /* Use fixed to position relative to viewport */
+            position: fixed;
             background-color: #333;
             color: white;
             border-radius: 6px;
             padding: 10px 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            z-index: 1010; /* Above everything */
+            z-index: 1010;
             max-width: 80vw;
             font-size: 14px;
             line-height: 1.5;
             user-select: all;
             -webkit-user-select: all;
-            touch-action: none; /* 防止触摸事件干扰长按 */
+            touch-action: none;
         }
         
-        /* 复制成功提示 */
         .copy-toast {
             position: fixed;
             bottom: 10%;
             left: 50%;
             transform: translateX(-50%);
-            background-color: transparent; /* 完全透明背景 */
-            color: black; /* 黑色文字 */
+            background-color: transparent;
+            color: black;
             padding: 10px 20px;
             border-radius: 20px;
             font-size: 16px;
@@ -360,14 +356,32 @@
             z-index: 1020;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* 防止点击穿透 */
-            text-shadow: 0 0 5px rgba(255,255,255,0.7); /* 文字阴影提高可读性 */
+            pointer-events: none;
+            text-shadow: 0 0 5px rgba(255,255,255,0.7);
         }
         
         .copy-toast.show {
             opacity: 1;
         }
 
+        .poi-info-label {
+            flex-shrink: 0;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+        
+        .poi-info code {
+            word-break: break-all;
+            white-space: pre-wrap;
+            background-color: #f6f8fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* ===============================================
+           状态样式与提示
+           =============================================== */
         .location-choice {
             border: 1px solid #ddd;
             padding: 10px;
@@ -379,24 +393,6 @@
         .location-choice:hover {
             background: #e9e9e9;
             border-color: #ccc;
-        }
-
-        .poi-info-label {
-            flex-shrink: 0;
-            white-space: nowrap;
-            margin-right: 8px;
-        }
-        .poi-info-value {
-            /* This value will now wrap correctly on its own */
-        }
-        
-        .poi-info code {
-            word-break: break-all;
-            white-space: pre-wrap;
-            background-color: #f6f8fa;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-size: 12px;
         }
         
         .raw-data {
@@ -434,17 +430,17 @@
         }
         
         .info-prompt {
-            color: #1890ff; /* Blue text */
-            background: #e6f7ff; /* Light blue background */
+            color: #1890ff;
+            background: #e6f7ff;
             padding: 10px;
             border-radius: 4px;
-            border: 1px solid #91d5ff; /* Blue border */
+            border: 1px solid #91d5ff;
         }
 
         .recommend-grid {
             display: grid;
             grid-template-columns: auto 1fr;
-            gap: 2px 8px; /* row-gap column-gap */
+            gap: 2px 8px;
             align-items: center;
         }
         .recommend-grid .recommend-emoji {
@@ -456,7 +452,10 @@
         .recommend-grid .recommend-text {
             grid-column: 2;
         }
-        
+
+        /* ===============================================
+           分类和排序按钮
+           =============================================== */
         .sort-buttons button.active {
             background-color: #096dd9;
             border-color: #096dd9;
@@ -466,23 +465,25 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 3px; /* 进一步减小手机端间距 */
-            margin-bottom: 15px; /* 保持与下方元素的距离 */
+            gap: 3px;
+            margin-bottom: 15px;
         }
 
         .category-buttons button {
             background-color: #e6f7ff;
             color: #1890ff;
             border: 1px solid #91d5ff;
-            margin: 0; /* 明确重置外边距 */
-            /* 移除旧的 margin，由父容器的 gap 控制 */
-            padding: 4px 10px; /* 减小垂直内边距，使按钮更紧凑 */
-            font-size: 14px; /* 统一字体大小 */
+            margin: 0;
+            padding: 4px 10px;
+            font-size: 14px;
         }
         .category-buttons button:hover {
             background-color: #bae7ff;
         }
 
+        /* ===============================================
+           滚动顶部按钮
+           =============================================== */
         #scrollTopBtn {
             display: none;
             position: fixed;
@@ -505,96 +506,93 @@
             background-color: rgba(24, 144, 255, 1);
         }
 
+        /* ===============================================
+           移动端响应式样式
+           =============================================== */
         @media (max-width: 768px) {
             body {
-                padding: 0; /* 在手机上移除边距，实现边缘到边缘的布局 */
+                padding: 0;
             }
 
             .container {
-                padding: 15px 0; /* 移除水平内边距，以使内容块抵达屏幕边缘 */
+                padding: 15px 0;
                 border-radius: 0;
                 box-shadow: none;
             }
 
             h1 {
-                font-size: 24px; /* Smaller main title */
+                font-size: 24px;
                 margin-bottom: 20px;
             }
 
             .form-row {
-                flex-direction: row; /* 在手机上并排显示 */
-                gap: 10px; /* 设置间距 */
+                flex-direction: row;
+                gap: 10px;
                 align-items: flex-start;
             }
             
-            /* Ensure spacing between stacked items */
             .form-row .form-group {
-                flex: 1; /* 每个项目占据均等空间 */
-                min-width: 0; /* 允许项目收缩 */
+                flex: 1;
+                min-width: 0;
                 margin-bottom: 15px; 
             }
             
-            /* 调整标签和输入框以适应并排布局 */
             .form-row label {
                 font-size: 13px;
                 white-space: nowrap;
             }
             .form-row input[type="number"] {
-                padding: 8px 6px; /* 减小输入框的内边距 */
+                padding: 8px 6px;
             }
 
-            /* Make main action buttons full width for easy tapping */
             #searchLocationBtn, #searchBtn {
-                width: auto; /* 改为自适应宽度 */
+                width: auto;
                 box-sizing: border-box;
             }
 
             .category-buttons {
-                gap: 8px; /* 在手机端使用gap统一控制间距 */
+                gap: 8px;
             }
             
-            /* 在手机端, 让按钮成为flexbox的直接子项, 以实现自然的换行 */
             .category-row {
                 display: contents;
             }
             
             .category-buttons button {
-                margin: 0; /* 移除独立margin, 由父容器的gap控制 */
+                margin: 0;
                 padding: 8px 12px;
                 font-size: 14px;
             }
 
-            /* Stack the POI list header (title and sort buttons) */
             .results .result-section > div[style*="display: flex"] {
                 flex-direction: column;
                 gap: 15px;
             }
             
             .sort-buttons {
-                justify-content: center; /* Center sort buttons */
-                flex-wrap: wrap; /* Allow buttons to wrap */
+                justify-content: center;
+                flex-wrap: wrap;
                 gap: 10px;
             }
 
-            /* Don't let sort buttons take full width */
             .sort-buttons button {
                 width: auto;
-                margin-left: 0 !important; /* Override inline style */
+                margin-left: 0 !important;
             }
             
             .poi-item {
                 padding: 15px;
-                min-height: 175px; /* 增大最小高度以确保图片完整显示 */
+                min-height: 175px;
             }
 
             .poi-name {
                 font-size: 15px;
-                padding-right: 145px; /* 为图片留出空间: 120px(图宽) + 15px(右边距) + 10px(空隙) */
+                padding-right: 145px;
             }
             
             .poi-info {
                 font-size: 13px;
-                padding-right: 160px; /* 增大右侧内边距，强制地址提前换行 */
+                padding-right: 160px;
             }
             
             .poi-item-photo {
@@ -1219,86 +1217,48 @@
     </div>
 
     <script>
-        // ===== 配置参数区域 - 可修改 =====
-        let originalDistanceSortedPois = []; // 存储按距离排序的原始POI列表
-        let currentDisplaySort = 'rating'; // 当前显示的排序规则, 改为好评优先
-        let comprehensiveSortMode = 'cost_effective'; // 综合排序的模式: 'cost_effective', 'high_end'
-        let searchCache = {}; // 新增：用于缓存搜索结果
-        let locationCache = {}; // 新增：用于缓存中心点搜索结果
+        /* ===============================================
+           全局变量与配置
+           =============================================== */
+        let originalDistanceSortedPois = [];
+        let currentDisplaySort = 'rating';
+        let comprehensiveSortMode = 'cost_effective';
+        let searchCache = {};
+        let locationCache = {};
         let cachedSortedResults = {
             distance: [],
             rating: [],
             cost_effective: [],
             high_end: []
         };
-        let locationChoices = []; // 新增: 用于存储多个中心点选项
-        let lastLocationKeyword = ''; // 新增: 用于跟踪上一次的中心点关键字
-        let lastUsedSearchParams = {}; // 新增: 用于存储上次成功搜索的参数
-        const CHINESE_CITIES = [
-            '北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区',
-            '哈尔滨市', '齐齐哈尔市', '鸡西市', '鹤岗市', '双鸭山市', '大庆市', '伊春市', '佳木斯市', '七台河市', '牡丹江市', '黑河市', '绥化市', '大兴安岭地区',
-            '长春市', '吉林市', '四平市', '辽源市', '通化市', '白山市', '松原市', '白城市', '延边朝鲜族自治州',
-            '沈阳市', '大连市', '鞍山市', '抚顺市', '本溪市', '丹东市', '锦州市', '营口市', '阜新市', '辽阳市', '盘锦市', '铁岭市', '朝阳市', '葫芦岛市',
-            '石家庄市', '唐山市', '秦皇岛市', '邯郸市', '邢台市', '保定市', '张家口市', '承德市', '沧州市', '廊坊市', '衡水市',
-            '太原市', '大同市', '阳泉市', '长治市', '晋城市', '朔州市', '晋中市', '运城市', '忻州市', '临汾市', '吕梁市',
-            '呼和浩特市', '包头市', '乌海市', '赤峰市', '通辽市', '鄂尔多斯市', '呼伦贝尔市', '巴彦淖尔市', '乌兰察布市', '兴安盟', '锡林郭勒盟', '阿拉善盟',
-            '南京市', '无锡市', '徐州市', '常州市', '苏州市', '南通市', '连云港市', '淮安市', '盐城市', '扬州市', '镇江市', '泰州市', '宿迁市',
-            '杭州市', '宁波市', '温州市', '嘉兴市', '湖州市', '绍兴市', '金华市', '衢州市', '舟山市', '台州市', '丽水市',
-            '合肥市', '芜湖市', '蚌埠市', '淮南市', '马鞍山市', '淮北市', '铜陵市', '安庆市', '黄山市', '滁州市', '阜阳市', '宿州市', '六安市', '亳州市', '池州市', '宣城市',
-            '福州市', '厦门市', '莆田市', '三明市', '泉州市', '漳州市', '南平市', '龙岩市', '宁德市',
-            '南昌市', '景德镇市', '萍乡市', '九江市', '新余市', '鹰潭市', '赣州市', '吉安市', '宜春市', '抚州市', '上饶市',
-            '济南市', '青岛市', '淄博市', '枣庄市', '东营市', '烟台市', '潍坊市', '济宁市', '泰安市', '威海市', '日照市', '临沂市', '德州市', '聊城市', '滨州市', '菏泽市',
-            '郑州市', '开封市', '洛阳市', '平顶山市', '安阳市', '鹤壁市', '新乡市', '焦作市', '濮阳市', '许昌市', '漯河市', '三门峡市', '南阳市', '商丘市', '信阳市', '周口市', '驻马店市',
-            '武汉市', '黄石市', '十堰市', '宜昌市', '襄阳市', '鄂州市', '荆门市', '孝感市', '荆州市', '黄冈市', '咸宁市', '随州市', '恩施土家族苗族自治州',
-            '长沙市', '株洲市', '湘潭市', '衡阳市', '邵阳市', '岳阳市', '常德市', '张家界市', '益阳市', '郴州市', '永州市', '怀化市', '娄底市', '湘西土家族苗族自治州',
-            '广州市', '韶关市', '深圳市', '珠海市', '汕头市', '佛山市', '江门市', '湛江市', '茂名市', '肇庆市', '惠州市', '梅州市', '汕尾市', '河源市', '阳江市', '清远市', '东莞市', '中山市', '潮州市', '揭阳市', '云浮市',
-            '南宁市', '柳州市', '桂林市', '梧州市', '北海市', '防城港市', '钦州市', '贵港市', '玉林市', '百色市', '贺州市', '河池市', '来宾市', '崇左市',
-            '海口市', '三亚市', '三沙市', '儋州市',
-            '成都市', '自贡市', '攀枝花市', '泸州市', '德阳市', '绵阳市', '广元市', '遂宁市', '内江市', '乐山市', '南充市', '眉山市', '宜宾市', '广安市', '达州市', '雅安市', '巴中市', '资阳市', '阿坝藏族羌族自治州', '甘孜藏族自治州', '凉山彝族自治州',
-            '贵阳市', '六盘水市', '遵义市', '安顺市', '毕节市', '铜仁市', '黔西南布依族苗族自治州', '黔东南苗族侗族自治州', '黔南布依族苗族自治州',
-            '昆明市', '曲靖市', '玉溪市', '保山市', '昭通市', '丽江市', '普洱市', '临沧市', '楚雄彝族自治州', '红河哈尼族彝族自治州', '文山壮族苗族自治州', '西双版纳傣族自治州', '大理白族自治州', '德宏傣族景颇族自治州', '怒江傈僳族自治州', '迪庆藏族自治州',
-            '拉萨市', '日喀则市', '昌都市', '林芝市', '山南市', '那曲市', '阿里地区',
-            '西安市', '铜川市', '宝鸡市', '咸阳市', '渭南市', '延安市', '汉中市', '榆林市', '安康市', '商洛市',
-            '兰州市', '嘉峪关市', '金昌市', '白银市', '天水市', '武威市', '张掖市', '平凉市', '酒泉市', '庆阳市', '定西市', '陇南市', '临夏回族自治州', '甘南藏族自治州',
-            '西宁市', '海东市', '海北藏族自治州', '黄南藏族自治州', '海南藏族自治州', '果洛藏族自治州', '玉树藏族自治州', '海西蒙古族藏族自治州',
-            '银川市', '石嘴山市', '吴忠市', '固原市', '中卫市',
-            '乌鲁木齐市', '克拉玛依市', '吐鲁番市', '哈密市', '昌吉回族自治州', '博尔塔拉蒙古自治州', '巴音郭楞蒙古自治州', '阿克苏地区', '克孜勒苏柯尔克孜自治州', '喀什地区', '和田地区', '伊犁哈萨克自治州', '塔城地区', '阿勒泰地区'
-        ];
+        let locationChoices = [];
+        let lastLocationKeyword = '';
+        let lastUsedSearchParams = {};
+        const CHINESE_CITIES = ['北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区', '哈尔滨市', '齐齐哈尔市', '鸡西市', '鹤岗市', '双鸭山市', '大庆市', '伊春市', '佳木斯市', '七台河市', '牡丹江市', '黑河市', '绥化市', '大兴安岭地区', '长春市', '吉林市', '四平市', '辽源市', '通化市', '白山市', '松原市', '白城市', '延边朝鲜族自治州', '沈阳市', '大连市', '鞍山市', '抚顺市', '本溪市', '丹东市', '锦州市', '营口市', '阜新市', '辽阳市', '盘锦市', '铁岭市', '朝阳市', '葫芦岛市', '石家庄市', '唐山市', '秦皇岛市', '邯郸市', '邢台市', '保定市', '张家口市', '承德市', '沧州市', '廊坊市', '衡水市', '太原市', '大同市', '阳泉市', '长治市', '晋城市', '朔州市', '晋中市', '运城市', '忻州市', '临汾市', '吕梁市', '呼和浩特市', '包头市', '乌海市', '赤峰市', '通辽市', '鄂尔多斯市', '呼伦贝尔市', '巴彦淖尔市', '乌兰察布市', '兴安盟', '锡林郭勒盟', '阿拉善盟', '南京市', '无锡市', '徐州市', '常州市', '苏州市', '南通市', '连云港市', '淮安市', '盐城市', '扬州市', '镇江市', '泰州市', '宿迁市', '杭州市', '宁波市', '温州市', '嘉兴市', '湖州市', '绍兴市', '金华市', '衢州市', '舟山市', '台州市', '丽水市', '合肥市', '芜湖市', '蚌埠市', '淮南市', '马鞍山市', '淮北市', '铜陵市', '安庆市', '黄山市', '滁州市', '阜阳市', '宿州市', '六安市', '亳州市', '池州市', '宣城市', '福州市', '厦门市', '莆田市', '三明市', '泉州市', '漳州市', '南平市', '龙岩市', '宁德市', '南昌市', '景德镇市', '萍乡市', '九江市', '新余市', '鹰潭市', '赣州市', '吉安市', '宜春市', '抚州市', '上饶市', '济南市', '青岛市', '淄博市', '枣庄市', '东营市', '烟台市', '潍坊市', '济宁市', '泰安市', '威海市', '日照市', '临沂市', '德州市', '聊城市', '滨州市', '菏泽市', '郑州市', '开封市', '洛阳市', '平顶山市', '安阳市', '鹤壁市', '新乡市', '焦作市', '濮阳市', '许昌市', '漯河市', '三门峡市', '南阳市', '商丘市', '信阳市', '周口市', '驻马店市', '武汉市', '黄石市', '十堰市', '宜昌市', '襄阳市', '鄂州市', '荆门市', '孝感市', '荆州市', '黄冈市', '咸宁市', '随州市', '恩施土家族苗族自治州', '长沙市', '株洲市', '湘潭市', '衡阳市', '邵阳市', '岳阳市', '常德市', '张家界市', '益阳市', '郴州市', '永州市', '怀化市', '娄底市', '湘西土家族苗族自治州', '广州市', '韶关市', '深圳市', '珠海市', '汕头市', '佛山市', '江门市', '湛江市', '茂名市', '肇庆市', '惠州市', '梅州市', '汕尾市', '河源市', '阳江市', '清远市', '东莞市', '中山市', '潮州市', '揭阳市', '云浮市', '南宁市', '柳州市', '桂林市', '梧州市', '北海市', '防城港市', '钦州市', '贵港市', '玉林市', '百色市', '贺州市', '河池市', '来宾市', '崇左市', '海口市', '三亚市', '三沙市', '儋州市', '成都市', '自贡市', '攀枝花市', '泸州市', '德阳市', '绵阳市', '广元市', '遂宁市', '内江市', '乐山市', '南充市', '眉山市', '宜宾市', '广安市', '达州市', '雅安市', '巴中市', '资阳市', '阿坝藏族羌族自治州', '甘孜藏族自治州', '凉山彝族自治州', '贵阳市', '六盘水市', '遵义市', '安顺市', '毕节市', '铜仁市', '黔西南布依族苗族自治州', '黔东南苗族侗族自治州', '黔南布依族苗族自治州', '昆明市', '曲靖市', '玉溪市', '保山市', '昭通市', '丽江市', '普洱市', '临沧市', '楚雄彝族自治州', '红河哈尼族彝族自治州', '文山壮族苗族自治州', '西双版纳傣族自治州', '大理白族自治州', '德宏傣族景颇族自治州', '怒江傈僳族自治州', '迪庆藏族自治州', '拉萨市', '日喀则市', '昌都市', '林芝市', '山南市', '那曲市', '阿里地区', '西安市', '铜川市', '宝鸡市', '咸阳市', '渭南市', '延安市', '汉中市', '榆林市', '安康市', '商洛市', '兰州市', '嘉峪关市', '金昌市', '白银市', '天水市', '武威市', '张掖市', '平凉市', '酒泉市', '庆阳市', '定西市', '陇南市', '临夏回族自治州', '甘南藏族自治州', '西宁市', '海东市', '海北藏族自治州', '黄南藏族自治州', '海南藏族自治州', '果洛藏族自治州', '玉树藏族自治州', '海西蒙古族藏族自治州', '银川市', '石嘴山市', '吴忠市', '固原市', '中卫市', '乌鲁木齐市', '克拉玛依市', '吐鲁番市', '哈密市', '昌吉回族自治州', '博尔塔拉蒙古自治州', '巴音郭楞蒙古自治州', '阿克苏地区', '克孜勒苏柯尔克孜自治州', '喀什地区', '和田地区', '伊犁哈萨克自治州', '塔城地区', '阿勒泰地区'];
         let allPoiPhotos = [];
-        let currentPoiPhotos = []; // Holds photos for the currently viewed POI
-        let currentPhotoIndex = 0; // Index of the photo shown in the lightbox
-        let isLightboxAnimating = false; // Animation lock
-        const preventNavSwipe = (e) => e.preventDefault(); // For mobile swipe fix
-        let linkClicked = false; // Flag to prevent double event firing
+        let currentPoiPhotos = [];
+        let currentPhotoIndex = 0;
+        let isLightboxAnimating = false;
+        const preventNavSwipe = (e) => e.preventDefault();
+        let linkClicked = false;
 
         const CONFIG = {
-            // 高德地图API基础URL
             GAODE_BASE_URL: 'https://restapi.amap.com',
             GAODE_KEY: 'dcfb48c0f9cb749e59c5031e83cb6e95',
-            
-            // 默认参数 - 改为直接获取包含图片在内的所有需要的信息
             DEFAULT_PARAMS: {
                 output: 'json',
                 show_fields: 'business,photos'
             }
         };
-        
-        // ===== 主要功能函数 =====
-        
-        /**
-         * 调用高德地图API的通用函数
-         * @param {string} apiPath - API路径，如 'v5/place/around'
-         * @param {Object} params - 查询参数
-         * @returns {Promise<Object>} - API响应数据
-         */
+
+        /* ===============================================
+           核心API与工具函数
+           =============================================== */
         async function callGaodeAPI(apiPath, params = {}) {
-            // 添加API Key到参数中
             const queryParams = {
                 ...params,
                 key: CONFIG.GAODE_KEY
             };
-            
-            // 构建URL
             const url = `${CONFIG.GAODE_BASE_URL}/${apiPath}?${new URLSearchParams(queryParams).toString()}`;
             
             try {
@@ -1309,25 +1269,14 @@
                 const data = await response.json();
                 return data;
             } catch (error) {
-                console.error('高德API调用失败:', error);
                 throw new Error(`API调用失败: ${error.message}`);
             }
         }
         
-        /**
-         * 等待指定毫秒数
-         * @param {number} ms - 等待的毫秒数
-         */
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
         
-        /**
-         * Truncate string if it exceeds a certain length
-         * @param {string} str The string to truncate
-         * @param {number} num The max number of characters
-         * @returns {string}
-         */
         function truncateString(str, num) {
             if (!str) return '';
             if (str.length <= num) {
@@ -1336,17 +1285,14 @@
             return str.slice(0, num) + '...';
         }
 
-        /**
-         * 点击分类按钮后触发搜索
-         * @param {string} category - 分类名称
-         */
         function searchByCategory(category) {
             document.getElementById('keywords').value = category;
-            // 统一调用新的搜索入口函数，它会处理UI更新和滚动
             searchNearby();
         }
 
-        // ===== POI 关键字智能映射 =====
+        /* ===============================================
+           POI类型映射与数据处理
+           =============================================== */
         const POI_KEYWORD_MAP = {
             '050100': ['餐厅', '饭店',  '吃饭','中餐厅', '中餐','午餐', '午饭', '晚餐', '晚饭'],
             '050101': ['酒楼'],
@@ -1391,29 +1337,18 @@
             .flatMap(([code, keywords]) => keywords.map(kw => ({ keyword: kw, code: code })))
             .sort((a, b) => b.keyword.length - a.keyword.length);
 
-        /**
-         * 根据用户输入查找完全匹配的POI类型。
-         * @param {string} userInput - 用户输入的关键字。
-         * @returns {string|null} - 匹配到的POI类型码，未匹配则返回null。
-         */
         function findPoiTypeByKeyword(userInput) {
             if (!userInput) return null;
-            // 使用完全匹配来查找，避免包含关系导致的错误
             const found = Object.entries(POI_KEYWORD_MAP).find(([code, keywords]) => {
                 return keywords.includes(userInput);
             });
-            return found ? found[0] : null; // 返回POI Code，如 '080000|080100'
+            return found ? found[0] : null;
         }
         
-        /**
-         * POI 列表去重
-         * @param {Array} pois - POI数组
-         * @returns {Array} - 去重后的POI数组
-         */
         function deduplicatePois(pois) {
             const seen = new Set();
             return pois.filter(poi => {
-                const name = poi.name; // 按地点名称去重
+                const name = poi.name;
                 if (seen.has(name)) {
                     return false;
                 }
@@ -1421,11 +1356,10 @@
                 return true;
             });
         }
-        
-        /**
-         * 切换排序并重新渲染列表
-         * @param {'distance' | 'rating' | 'comprehensive'} sortType
-         */
+
+        /* ===============================================
+           排序算法与缓存管理
+           =============================================== */
         function applySort(sortType) {
             currentDisplaySort = sortType;
             let listToRender = [];
@@ -1439,17 +1373,11 @@
             renderPoiList(listToRender);
         }
 
-        /**
-         * 切换综合排序的模式
-         */
         function toggleComprehensiveSort() {
             comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
             applySort('comprehensive');
         }
 
-        /**
-         * 预计算所有排序
-         */
         function precomputeAndCacheAllSorts(limit) {
             const effectiveLimit = limit > 0 ? limit : originalDistanceSortedPois.length;
             cachedSortedResults.distance = [...originalDistanceSortedPois].slice(0, effectiveLimit);
@@ -1458,11 +1386,7 @@
             cachedSortedResults.high_end = sortPoisByComprehensive(originalDistanceSortedPois, 'high_end').slice(0, effectiveLimit);
         }
 
-        /**
-         * 根据好评优先规则排序
-         */
         function sortPoisByRating(pois) {
-            // 确保pois是按距离排序的
             const sortedByDistance = [...pois].sort((a, b) => a.distance - b.distance);
 
             const poisWithRanks = sortedByDistance.map(poi => ({
@@ -1471,15 +1395,12 @@
                 rating: parseFloat(poi.business?.rating) || 0,
             }));
 
-            // 按评分降序，得到评分排名
             const sortedByRating = [...poisWithRanks].sort((a, b) => b.rating - a.rating);
             sortedByRating.forEach((p, i) => {
-                // 在原始数组中找到对应的poi并设置其排名
                 const originalPoi = poisWithRanks.find(item => item.id === p.id);
                 if(originalPoi) originalPoi.ratingRank = i + 1;
             });
 
-            // Find max ranks for normalization to ensure fair weighting
             const maxRatingRank = poisWithRanks.length;
             let maxDistance = 0;
             poisWithRanks.forEach(p => {
@@ -1487,15 +1408,12 @@
             });
             const maxDistanceRank = Math.floor(maxDistance / 500) + 1;
 
-            // Calculate composite score using normalized ranks
             poisWithRanks.forEach(poi => {
-                // Normalize ranks to a 0-1 scale. If max rank is 1, all items have same rank, norm is 0.
                 const normRating = maxRatingRank > 1 ? (poi.ratingRank - 1) / (maxRatingRank - 1) : 0;
                 const normDistance = maxDistanceRank > 1 ? (poi.distanceRank - 1) / (maxDistanceRank - 1) : 0;
                 poi.compositeScore = (normRating * 0.8) + (normDistance * 0.2);
             });
             
-            // 按综合得分升序排序
             poisWithRanks.sort((a, b) => a.compositeScore - b.compositeScore);
             
             return poisWithRanks;
@@ -1632,10 +1550,9 @@
             }
         }
 
-        /**
-         * 渲染POI列表到页面
-         * @param {Array} pois - 要渲染的POI数组
-         */
+        /* ===============================================
+           POI列表渲染与显示
+           =============================================== */
         function renderPoiList(pois) {
             const listContainer = document.getElementById('poi-list-container');
             if (!listContainer) return;
@@ -1919,10 +1836,9 @@
             lastLocationKeyword = selectedPoi.name;
         }
 
-        /**
-         * 根据关键字搜索中心点坐标
-         * @param {boolean} isAutomated - 是否为自动化执行，若是，则自动选择第一个结果
-         */
+        /* ===============================================
+           中心点定位与选择
+           =============================================== */
         async function searchLocationByKeyword(isAutomated = false) {
             let locationKeyword = document.getElementById('locationKeyword').value.trim();
             if (!locationKeyword) {
@@ -2023,7 +1939,6 @@
                     statusDiv.innerHTML = `<div class="error">没有找到满足您要求的坐标</div>`;
                 }
             } catch (error) {
-                console.error('❌ 中心点搜索失败:', error);
                 statusDiv.innerHTML = `<div class="error">中心点坐标获取失败: ${error.message}</div>`;
                 document.getElementById('longitude').value = '';
                 document.getElementById('latitude').value = '';
@@ -2033,32 +1948,25 @@
             }
         }
 
-        /**
-         * 执行周边搜索 (入口函数)
-         */
+        /* ===============================================
+           搜索执行与结果处理
+           =============================================== */
         async function searchNearby() {
-            // 注意：此函数现在是所有周边搜索的统一入口
-
-            // 1. 清理状态和缓存
             originalDistanceSortedPois = [];
             cachedSortedResults = { distance: [], rating: [], cost_effective: [], high_end: [] };
-            currentDisplaySort = 'rating'; // 确保每次新搜索都重置为好评优先
+            currentDisplaySort = 'rating';
             comprehensiveSortMode = 'cost_effective';
             
             const resultsDiv = document.getElementById('results');
-
-            // Preserve the height of the results container to prevent page jump on clear
             const currentHeight = resultsDiv.offsetHeight;
             resultsDiv.style.minHeight = `${currentHeight > 0 ? currentHeight : 80}px`;
 
-            // 2. 立即设置加载状态的UI
             resultsDiv.innerHTML = `
                 <div class="result-section" id="search-status-section">
                     <h3>🔄 正在搜索地点列表，请稍候...</h3>
                 </div>
             `;
 
-            // 4. 将实际的搜索操作推迟，以确保滚动动画流畅
             await sleep(50);
             await doSearch();
         }
@@ -2156,7 +2064,6 @@
                         finalStatus = data.status;
                         finalInfo = data.info;
                         finalInfocode = data.infocode;
-                        console.error(`❌ 第 ${currentPage} 页请求失败:`, data.info);
                         break; 
                     }
                     
@@ -2213,7 +2120,6 @@
                 displayResults(aggregatedData, pagesToDisplay, cachedSortedResults['rating'], rawFetchedCount, isPoiTypeSearch, false, params);
 
             } catch (error) {
-                console.error('❌ 请求失败:', error);
                 resultsDiv.innerHTML = `<div class="error">请求失败: ${error.message}</div>`;
             }
         }
@@ -2282,20 +2188,14 @@
          * 显示搜索结果
          */
         function displayResults(data, pagesFetched, initialPois, rawFetchedCount, isPoiTypeSearch, isFromCache = false, searchParams = null) {
-            if (!isFromCache) {
-                // console.log('📋 原始返回数据:', JSON.stringify(data, null, 2));
-            }
-            
             const resultsDiv = document.getElementById('results');
             const statusSection = document.getElementById('search-status-section');
 
-            // 安全校验，确保加载状态的容器存在
             if (!statusSection) {
                 resultsDiv.innerHTML = '<div class="error">渲染错误：找不到状态显示区域。</div>';
                 return;
             }
 
-            // 清理旧的POI列表和原始数据（如果有）
             const oldPoiList = document.getElementById('poi-list-section');
             if (oldPoiList) oldPoiList.remove();
             const oldRawData = document.querySelector('.raw-data-section');
@@ -2346,8 +2246,6 @@
             } else { // 错误情况
                 const errorMsg = data.info || '未知错误';
                 const infoCode = data.infocode || '';
-                
-                console.error('❌ API返回错误:', data);
                 
                 // 更新状态区域为"失败"
                 statusSection.innerHTML = `
@@ -2654,7 +2552,6 @@
                         }
                     }
                 } catch (error) {
-                    console.error("Failed to fetch POI details:", error);
                 }
             }
 
@@ -2755,7 +2652,6 @@
                            const photos = JSON.parse(photosJson);
                            openLightbox(photos, poiId);
                         } catch (err) {
-                           console.error("Failed to parse photos JSON:", err);
                         }
                     }
                 }
@@ -2910,10 +2806,9 @@
             }
         });
 
-        /**
-         * Detects the type of device based on user agent.
-         * @returns {'wechat' | 'ios' | 'android' | 'pc'}
-         */
+        /* ===============================================
+           设备检测与地图跳转
+           =============================================== */
         function getDeviceType() {
             const ua = navigator.userAgent.toLowerCase();
             if (/micromessenger/.test(ua)) {
@@ -2942,7 +2837,6 @@
             
             const poi = originalDistanceSortedPois.find(p => p.id === poiId);
             if (!poi) {
-                console.error('Could not find POI with ID:', poiId);
                 alert('抱歉，无法生成地图链接，未找到该地点的详细信息。');
                 linkClicked = false;
                 return;
@@ -3092,7 +2986,6 @@
                     }
                 }
             } catch (error) {
-                console.error('自动还原搜索时发生错误:', error);
                 const statusDiv = document.getElementById('locationStatus');
                 statusDiv.innerHTML = `<div class="error">自动还原搜索失败: ${error.message}</div>`;
             } finally {
