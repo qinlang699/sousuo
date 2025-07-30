@@ -9,6 +9,8 @@
     <meta property="og:url" content="https://qinlang699.cn/" />
     <meta property="og:image" content="https://img.icons8.com/color/480/map-marker.png" />
     <meta property="og:description" content="一个快速、强大的高德地图周边信息搜索工具，帮您轻松找到目的地。" />
+    
+    <script src="https://webapi.amap.com/maps?v=2.0&key=dcfb48c0f9cb749e59c5031e83cb6e95&plugin=AMap.Geolocation"></script>
 
     <style>
         /* ===============================================
@@ -42,7 +44,7 @@
         :root {
             --lightbox-edge-area-size: 80px;
         }
-
+        
         /* ===============================================
            基础布局样式
            =============================================== */
@@ -76,7 +78,7 @@
             text-align: center;
             margin-bottom: 30px;
         }
-
+        
         /* ===============================================
            搜索表单样式
            =============================================== */
@@ -145,7 +147,7 @@
         .form-row .form-group {
             flex: 1;
         }
-
+        
         /* ===============================================
            按钮样式
            =============================================== */
@@ -176,7 +178,7 @@
             cursor: not-allowed;
             border-color: #096dd9;
         }
-
+        
         /* ===============================================
            结果显示区域
            =============================================== */
@@ -198,7 +200,7 @@
             margin-top: 0;
             color: #1890ff;
         }
-
+        
         /* ===============================================
            POI列表项样式
            =============================================== */
@@ -298,7 +300,7 @@
             align-items: flex-start;
             margin-bottom: 2px;
         }
-
+        
         /* ===============================================
            地址按钮与弹窗
            =============================================== */
@@ -452,7 +454,7 @@
         .recommend-grid .recommend-text {
             grid-column: 2;
         }
-
+        
         /* ===============================================
            分类和排序按钮
            =============================================== */
@@ -1111,11 +1113,18 @@
         
         
         <div class="search-form">
+            <div class="form-group" style="text-align: center;">
+                <label>1.获取当前位置的定位:</label>
+                <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
+            </div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
+            
             <div class="form-group">
-                <label for="locationKeyword">1.输入中心点关键字:</label>
+                <label for="locationKeyword">2.手动输入精确位置:</label>
                 <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="">
             </div>
-            <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 定位中心点 </button>
+            <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 获取该位置</button>
             <div id="locationStatus" style="margin-top: 15px;"></div>
 
             <div id="nearby-search-section" style="display: none;">
@@ -1250,7 +1259,7 @@
                 show_fields: 'business,photos'
             }
         };
-
+        
         /* ===============================================
            核心API与工具函数
            =============================================== */
@@ -1356,7 +1365,7 @@
                 return true;
             });
         }
-
+        
         /* ===============================================
            排序算法与缓存管理
            =============================================== */
@@ -1839,6 +1848,175 @@
         /* ===============================================
            中心点定位与选择
            =============================================== */
+        
+        // 高德定位功能
+        async function getCurrentLocation() {
+            const currentLocationBtn = document.getElementById('currentLocationBtn');
+            const statusDiv = document.getElementById('locationStatus');
+            const nearbySection = document.getElementById('nearby-search-section');
+            
+            // 隐藏周边搜索区域
+            nearbySection.style.display = 'none';
+            document.getElementById('results').innerHTML = '';
+            
+            // 设置按钮状态
+            currentLocationBtn.disabled = true;
+            currentLocationBtn.textContent = '🔄 定位中...';
+            statusDiv.innerHTML = `<div class="loading">正在获取您的当前位置...</div>`;
+            
+            try {
+                if (typeof AMap === 'undefined') {
+                    throw new Error('高德API未加载');
+                }
+
+                AMap.plugin('AMap.Geolocation', function() {
+                    const geolocation = new AMap.Geolocation({
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0,  // 不使用缓存
+                        convert: true
+                    });
+
+                    geolocation.on('complete', async function(result) {
+                        try {
+                            let lat = result.position.lat;
+                            let lng = result.position.lng;
+                            const isConverted = result.info?.isConverted || false;
+                            
+                            // 如果未转换，手动转换坐标系
+                            if (!isConverted) {
+                                try {
+                                    const url = `https://restapi.amap.com/v3/assistant/coordinate/convert?locations=${lng},${lat}&coordsys=gps&output=json&key=dcfb48c0f9cb749e59c5031e83cb6e95`;
+                                    const response = await fetch(url);
+                                    const data = await response.json();
+                                    
+                                    if (data.status === '1' && data.locations) {
+                                        const [gcjLng, gcjLat] = data.locations.split(',').map(Number);
+                                        lng = gcjLng;
+                                        lat = gcjLat;
+                                    }
+                                } catch (error) {
+                                    console.log('坐标转换失败，使用原坐标:', error);
+                                }
+                            }
+                            
+                            // 获取周边POI (半径100米，最多5个)
+                            const nearbyPois = await getNearbyPOIs(lng, lat);
+                            
+                            if (nearbyPois && nearbyPois.length > 0) {
+                                // 使用现有的地点选择UI
+                                renderLocationChoices(nearbyPois, false);
+                            } else {
+                                // 如果没有POI，进行逆地理编码获取地址
+                                const address = await reverseGeocode(lng, lat);
+                                if (address) {
+                                    // 创建一个虚拟POI对象
+                                    const virtualPoi = {
+                                        name: address,
+                                        location: `${lng},${lat}`,
+                                        address: address,
+                                        pname: '',
+                                        cityname: '',
+                                        adname: ''
+                                    };
+                                    processLocationPoi(virtualPoi, false);
+                                } else {
+                                    statusDiv.innerHTML = `<div class="error">无法获取位置信息</div>`;
+                                }
+                            }
+                            
+                        } catch (error) {
+                            statusDiv.innerHTML = `<div class="error">定位处理失败: ${error.message}</div>`;
+                        } finally {
+                            currentLocationBtn.disabled = false;
+                            currentLocationBtn.textContent = '📍 高德定位';
+                        }
+                    });
+
+                    geolocation.on('error', function(error) {
+                        statusDiv.innerHTML = `<div class="error">定位失败: ${error.message || error.info}</div>`;
+                        currentLocationBtn.disabled = false;
+                        currentLocationBtn.textContent = '📍 高德定位';
+                    });
+
+                    geolocation.getCurrentPosition();
+                });
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">定位初始化失败: ${error.message}</div>`;
+                currentLocationBtn.disabled = false;
+                currentLocationBtn.textContent = '📍 高德定位';
+            }
+        }
+        
+        // 获取周边POI
+        async function getNearbyPOIs(lng, lat) {
+            try {
+                const url = `https://restapi.amap.com/v3/geocode/regeo?location=${lng},${lat}&key=dcfb48c0f9cb749e59c5031e83cb6e95&radius=100&extensions=all&output=json`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let resultPois = [];
+                
+                if (data.status === '1' && data.regeocode) {
+                    // 获取POI
+                    if (data.regeocode.pois && data.regeocode.pois.length > 0) {
+                        let pois = data.regeocode.pois;
+                        
+                        // 按距离排序，取前5个
+                        pois.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                        pois = pois.slice(0, 5);
+                        
+                        // 转换为与searchLocationByKeyword相同的格式
+                        resultPois = pois.map(poi => ({
+                            name: poi.name,
+                            location: poi.location || `${lng},${lat}`,
+                            address: poi.address || '',
+                            pname: data.regeocode.addressComponent.province || '',
+                            cityname: data.regeocode.addressComponent.city || '',
+                            adname: data.regeocode.addressComponent.district || '',
+                            distance: poi.distance
+                        }));
+                    }
+                    
+                    // 如果POI数量不够5个，添加格式化地址作为选项
+                    if (resultPois.length < 5 && data.regeocode.formatted_address) {
+                        resultPois.push({
+                            name: '当前位置',
+                            location: `${lng},${lat}`,
+                            address: data.regeocode.formatted_address,
+                            pname: data.regeocode.addressComponent.province || '',
+                            cityname: data.regeocode.addressComponent.city || '',
+                            adname: data.regeocode.addressComponent.district || '',
+                            distance: '0'
+                        });
+                    }
+                }
+                
+                return resultPois;
+            } catch (error) {
+                console.error('获取周边POI失败:', error);
+                return [];
+            }
+        }
+        
+        // 逆地理编码
+        async function reverseGeocode(lng, lat) {
+            try {
+                const url = `https://restapi.amap.com/v3/geocode/regeo?location=${lng},${lat}&key=dcfb48c0f9cb749e59c5031e83cb6e95&radius=50&extensions=base&output=json`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.regeocode) {
+                    return data.regeocode.formatted_address;
+                }
+                return null;
+            } catch (error) {
+                console.error('逆地理编码失败:', error);
+                return null;
+            }
+        }
+
         async function searchLocationByKeyword(isAutomated = false) {
             let locationKeyword = document.getElementById('locationKeyword').value.trim();
             if (!locationKeyword) {
@@ -1944,7 +2122,7 @@
                 document.getElementById('latitude').value = '';
             } finally {
                 searchBtn.disabled = false;
-                searchBtn.textContent = '📍定位中心点';
+                searchBtn.textContent = '📍 获取该位置';
             }
         }
 
