@@ -92,44 +92,86 @@
             transition: box-shadow 0.3s ease;
         }
         
-        /* 移动端双列布局样式 */
-        .mobile-dual-layout {
-            display: flex;
-            gap: 15px;
-            align-items: stretch;
-        }
-        
-        .mobile-location-left {
-            flex: 1;
-            text-align: left;
+        /* 移动端三行布局样式 */
+        .mobile-triple-layout {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            gap: 10px;
         }
         
-        .mobile-location-right {
+        /* 第一行：标签行 */
+        .mobile-labels-row {
+            display: flex;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mobile-label-left {
+            flex: 1;
+            text-align: left;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mobile-label-right {
             flex: 2;
             text-align: left;
+            margin: 0;
+            padding: 0;
         }
         
-        .mobile-dual-layout .form-group {
-            margin-bottom: 8px;
+        /* 第二行：输入框行 */
+        .mobile-input-row {
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
         
-        .mobile-dual-layout .form-group:last-child {
-            margin-bottom: 0;
-        }
-        
-        .mobile-dual-layout label {
-            margin-bottom: 8px;
+        .mobile-input-row input {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             font-size: 14px;
         }
         
-        .mobile-dual-layout button {
+        /* 第三行：按钮行 */
+        .mobile-buttons-row {
+            display: flex;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mobile-button-left {
+            flex: 1;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mobile-button-right {
+            flex: 2;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .mobile-buttons-row button {
             width: 100%;
             padding: 12px 8px;
             font-size: 14px;
             white-space: nowrap;
+        }
+        
+        .mobile-triple-layout label {
+            margin: 0;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            display: block;
         }
         
         .search-form:hover {
@@ -1153,22 +1195,29 @@
         
         
         <div class="search-form">
-            <!-- 移动端双列布局容器 -->
-            <div id="mobileLocationContainer" class="mobile-dual-layout" style="display: none;">
-                <div class="mobile-location-left">
-                    <div class="form-group">
+            <!-- 移动端三行布局容器 -->
+            <div id="mobileLocationContainer" class="mobile-triple-layout" style="display: none;">
+                <!-- 第一行：标签 -->
+                <div class="mobile-labels-row">
+                    <div class="mobile-label-left">
                         <label>1.获取当前定位:</label>
-                        <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
                     </div>
-                </div>
-                <div class="mobile-location-right">
-                    <div class="form-group">
+                    <div class="mobile-label-right">
                         <label for="locationKeyword">2.手动输入位置:</label>
                     </div>
-                    <div class="form-group">
-                        <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
+                </div>
+                
+                <!-- 第二行：输入框 -->
+                <div class="mobile-input-row">
+                    <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
+                </div>
+                
+                <!-- 第三行：按钮 -->
+                <div class="mobile-buttons-row">
+                    <div class="mobile-button-left">
+                        <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
                     </div>
-                    <div class="form-group">
+                    <div class="mobile-button-right">
                         <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 获取该位置</button>
                     </div>
                 </div>
@@ -1176,12 +1225,12 @@
             
             <!-- 电脑端单列布局容器 -->
             <div id="desktopLocationContainer" style="display: none;">
-                <div class="form-group">
+            <div class="form-group">
                     <label for="locationKeyword" id="manualLocationLabel">1.手动输入位置:</label>
                     <input type="text" id="locationKeywordDesktop" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
                     <div style="text-align: center; margin-top: 10px;">
                         <button onclick="searchLocationByKeyword()" id="searchLocationBtnDesktop">📍 获取该位置</button>
-                    </div>
+            </div>
                 </div>
             </div>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -1446,7 +1495,7 @@
         function toggleComprehensiveSort() {
             // 如果当前已经是综合排序模式，则切换综合排序类型
             if (currentDisplaySort === 'comprehensive') {
-                comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
+            comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
             }
             // 如果不是综合排序模式，直接应用当前的综合排序模式，不切换
             applySort('comprehensive');
@@ -1898,7 +1947,7 @@
             // 更新两个输入框为所选的地名
             const mobileInput = document.getElementById('locationKeyword');
             const desktopInput = document.getElementById('locationKeywordDesktop');
-            
+
             if (mobileInput) mobileInput.value = selectedPoi.name;
             if (desktopInput) desktopInput.value = selectedPoi.name;
 
@@ -1915,13 +1964,13 @@
                 lastLocationKeyword = selectedPoi.name;
             } else {
                 // 来自手动输入：正常处理并缓存
-                processLocationPoi(selectedPoi, false);
+            processLocationPoi(selectedPoi, false);
                 updateSearchButtonState('completed');
-                // 使用新的、明确的地名作为键来缓存选择
-                locationCache[selectedPoi.name] = { pois: [selectedPoi], cityMatch: true };
-                // 成功选择后，同样更新"上一次的关键字"
-                lastLocationKeyword = selectedPoi.name;
-            }
+            // 使用新的、明确的地名作为键来缓存选择
+            locationCache[selectedPoi.name] = { pois: [selectedPoi], cityMatch: true };
+            // 成功选择后，同样更新"上一次的关键字"
+            lastLocationKeyword = selectedPoi.name;
+        }
         }
 
         /* ===============================================
@@ -1983,7 +2032,7 @@
                 alert('该功能仅在移动设备上可用。请在手机或平板电脑上访问此页面使用定位功能。');
                 return;
             }
-            
+
             const currentLocationBtn = document.getElementById('currentLocationBtn');
             const statusDiv = document.getElementById('locationStatus');
             const nearbySection = document.getElementById('nearby-search-section');
@@ -2286,7 +2335,7 @@
             }
 
             let searchSuccess = false;
-            
+
             try {
                 const data = await callGaodeAPI('v5/place/text', params);
                 let poisToProcess = (data.status === '1' && data.pois) ? data.pois : [];
@@ -2331,7 +2380,7 @@
             } finally {
                 if (!searchSuccess) {
                     // 只有在失败时才恢复正常状态
-                    searchBtn.disabled = false;
+                searchBtn.disabled = false;
                     searchBtn.textContent = '📍 获取该位置';
                 }
             }
@@ -2744,9 +2793,9 @@
                     categoryLabel.textContent = '2.点击分类按钮或手动输入关键字:';
                 }
             } else {
-                // 移动端：显示移动端双列布局，隐藏电脑端布局
+                // 移动端：显示移动端三行布局，隐藏电脑端布局
                 if (mobileContainer) {
-                    mobileContainer.style.display = 'flex';
+                    mobileContainer.style.display = 'block';
                 }
                 if (desktopContainer) {
                     desktopContainer.style.display = 'none';
@@ -2771,7 +2820,7 @@
                 desktopInput.value = mobileInput.value;
             }
         }
-
+        
         // ===== 页面加载完成后的初始化 =====
         document.addEventListener('DOMContentLoaded', function() {
             // 首先调整设备UI
