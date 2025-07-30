@@ -1385,10 +1385,15 @@
             }
             
             renderPoiList(listToRender);
+            updateSortButtonStyles(); // 更新按钮状态
         }
 
         function toggleComprehensiveSort() {
-            comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
+            // 如果当前已经是综合排序模式，则切换综合排序类型
+            if (currentDisplaySort === 'comprehensive') {
+                comprehensiveSortMode = comprehensiveSortMode === 'cost_effective' ? 'high_end' : 'cost_effective';
+            }
+            // 如果不是综合排序模式，直接应用当前的综合排序模式，不切换
             applySort('comprehensive');
         }
 
