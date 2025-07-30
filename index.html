@@ -1113,17 +1113,17 @@
         
         
         <div class="search-form">
-            <div class="form-group">
+            <div class="form-group" id="currentLocationSection">
                 <label>1.获取当前位置的定位:</label>
                 <div style="text-align: center;">
                     <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
                 </div>
             </div>
             
-            <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
+            <hr id="locationSeparator" style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
             
             <div class="form-group">
-                <label for="locationKeyword">2.手动输入精确位置:</label>
+                <label for="locationKeyword" id="manualLocationLabel">2.手动输入精确位置:</label>
                 <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
                 <div style="text-align: center; margin-top: 10px;">
                     <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 获取该位置</button>
@@ -1135,7 +1135,7 @@
                 <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
 
                 <div class="form-group">
-                    <label for="keywords">2.点击分类按钮或手动输入关键字:</label>
+                    <label for="keywords" id="categoryLabel">2.点击分类按钮或手动输入关键字:</label>
                 </div>
 
                 <div class="category-buttons form-group">
@@ -1898,6 +1898,13 @@
         
         // 高德定位功能
         async function getCurrentLocation() {
+            // 检查是否为电脑端
+            const deviceInfo = detectDeviceType();
+            if (deviceInfo.isDesktop) {
+                alert('该功能仅在移动设备上可用。请在手机或平板电脑上访问此页面使用定位功能。');
+                return;
+            }
+            
             const currentLocationBtn = document.getElementById('currentLocationBtn');
             const statusDiv = document.getElementById('locationStatus');
             const nearbySection = document.getElementById('nearby-search-section');
@@ -2004,51 +2011,82 @@
             }
         }
         
-        // 获取周边POI
+        // 获取周边POI - 逐步扩大搜索范围
         async function getNearbyPOIs(lng, lat) {
+            const searchRadii = [100, 500, 2000]; // 搜索半径：100米 -> 500米 -> 2000米
+            let allPois = [];
+            let formattedAddress = '';
+            let addressComponent = {};
+            
             try {
-                const url = `https://restapi.amap.com/v3/geocode/regeo?location=${lng},${lat}&key=dcfb48c0f9cb749e59c5031e83cb6e95&radius=100&extensions=all&output=json`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                let resultPois = [];
-                
-                if (data.status === '1' && data.regeocode) {
-                    // 获取POI
-                    if (data.regeocode.pois && data.regeocode.pois.length > 0) {
-                        let pois = data.regeocode.pois;
-                        
-                        // 按距离排序，取前5个
-                        pois.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-                        pois = pois.slice(0, 5);
-                        
-                        // 转换为与searchLocationByKeyword相同的格式
-                        resultPois = pois.map(poi => ({
-                            name: poi.name,
-                            location: poi.location || `${lng},${lat}`,
-                            address: poi.address || '',
-                            pname: data.regeocode.addressComponent.province || '',
-                            cityname: data.regeocode.addressComponent.city || '',
-                            adname: data.regeocode.addressComponent.district || '',
-                            distance: poi.distance
-                        }));
-                    }
+                for (const radius of searchRadii) {
+                    console.log(`搜索半径 ${radius}米...`);
                     
-                    // 如果POI数量不够5个，添加格式化地址作为选项
-                    if (resultPois.length < 5 && data.regeocode.formatted_address) {
-                        resultPois.push({
-                            name: '当前位置',
-                            location: `${lng},${lat}`,
-                            address: data.regeocode.formatted_address,
-                            pname: data.regeocode.addressComponent.province || '',
-                            cityname: data.regeocode.addressComponent.city || '',
-                            adname: data.regeocode.addressComponent.district || '',
-                            distance: '0'
-                        });
+                    const url = `https://restapi.amap.com/v3/geocode/regeo?location=${lng},${lat}&key=dcfb48c0f9cb749e59c5031e83cb6e95&radius=${radius}&extensions=all&output=json`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.status === '1' && data.regeocode) {
+                        // 保存地址信息（第一次获取时）
+                        if (!formattedAddress && data.regeocode.formatted_address) {
+                            formattedAddress = data.regeocode.formatted_address;
+                            addressComponent = data.regeocode.addressComponent || {};
+                        }
+                        
+                        // 获取此半径下的POI
+                        if (data.regeocode.pois && data.regeocode.pois.length > 0) {
+                            const newPois = data.regeocode.pois;
+                            
+                            // 去重（避免不同半径搜索到重复POI）
+                            const existingNames = new Set(allPois.map(poi => poi.name));
+                            const uniqueNewPois = newPois.filter(poi => !existingNames.has(poi.name));
+                            
+                            // 添加新的POI到总列表
+                            uniqueNewPois.forEach(poi => {
+                                allPois.push({
+                                    name: poi.name,
+                                    location: poi.location || `${lng},${lat}`,
+                                    address: poi.address || '',
+                                    pname: addressComponent.province || '',
+                                    cityname: addressComponent.city || '',
+                                    adname: addressComponent.district || '',
+                                    distance: poi.distance,
+                                    searchRadius: radius // 记录搜索半径
+                                });
+                            });
+                            
+                            console.log(`半径 ${radius}米: 新增 ${uniqueNewPois.length} 个POI，总计 ${allPois.length} 个`);
+                            
+                            // 如果已经找到5个或更多POI，停止搜索
+                            if (allPois.length >= 5) {
+                                console.log(`已找到足够的POI (${allPois.length}个)，停止扩大搜索范围`);
+                                break;
+                            }
+                        }
                     }
                 }
                 
+                // 按距离排序，取前5个
+                allPois.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                const resultPois = allPois.slice(0, 5);
+                
+                // 如果仍然不够5个，添加"当前位置"作为选项
+                if (resultPois.length < 5 && formattedAddress) {
+                    resultPois.push({
+                        name: '当前位置',
+                        location: `${lng},${lat}`,
+                        address: formattedAddress,
+                        pname: addressComponent.province || '',
+                        cityname: addressComponent.city || '',
+                        adname: addressComponent.district || '',
+                        distance: '0',
+                        searchRadius: 0
+                    });
+                }
+                
+                console.log(`最终返回 ${resultPois.length} 个地点选项`);
                 return resultPois;
+                
             } catch (error) {
                 console.error('获取周边POI失败:', error);
                 return [];
@@ -2575,8 +2613,68 @@
             }, 100);
         }
         
+        // 设备检测函数
+        function detectDeviceType() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(userAgent);
+            const isTablet = /ipad|android(?!.*mobile)/i.test(userAgent);
+            
+            return {
+                isMobile: isMobile && !isTablet,
+                isTablet: isTablet,
+                isDesktop: !isMobile && !isTablet,
+                userAgent: navigator.userAgent
+            };
+        }
+        
+        // 根据设备类型调整UI
+        function adjustUIForDevice() {
+            const deviceInfo = detectDeviceType();
+            const currentLocationSection = document.getElementById('currentLocationSection');
+            const locationSeparator = document.getElementById('locationSeparator');
+            const manualLocationLabel = document.getElementById('manualLocationLabel');
+            const categoryLabel = document.getElementById('categoryLabel');
+            
+            if (deviceInfo.isDesktop) {
+                // 电脑端：隐藏高德定位相关内容
+                if (currentLocationSection) {
+                    currentLocationSection.style.display = 'none';
+                }
+                if (locationSeparator) {
+                    locationSeparator.style.display = 'none';
+                }
+                // 修改标签为"1.手动输入精确位置:"
+                if (manualLocationLabel) {
+                    manualLocationLabel.textContent = '1.手动输入精确位置:';
+                }
+                // 修改分类标签为"2.点击分类按钮或手动输入关键字:"
+                if (categoryLabel) {
+                    categoryLabel.textContent = '2.点击分类按钮或手动输入关键字:';
+                }
+            } else {
+                // 移动端：显示所有内容
+                if (currentLocationSection) {
+                    currentLocationSection.style.display = 'block';
+                }
+                if (locationSeparator) {
+                    locationSeparator.style.display = 'block';
+                }
+                // 保持"2.手动输入精确位置:"
+                if (manualLocationLabel) {
+                    manualLocationLabel.textContent = '2.手动输入精确位置:';
+                }
+                // 修改分类标签为"3.点击分类按钮或手动输入关键字:"
+                if (categoryLabel) {
+                    categoryLabel.textContent = '3.点击分类按钮或手动输入关键字:';
+                }
+            }
+        }
+
         // ===== 页面加载完成后的初始化 =====
         document.addEventListener('DOMContentLoaded', function() {
+            // 首先调整设备UI
+            adjustUIForDevice();
+            
             // 清理掉之前用于"复现搜索"但失败了的 sessionStorage 逻辑。
             // 由于微信和外部浏览器会话隔离，此方案无效。
             // 保留一个干净的启动流程。
