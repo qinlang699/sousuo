@@ -1901,6 +1901,9 @@
             nearbySection.style.display = 'none';
             document.getElementById('results').innerHTML = '';
             
+            // 重置"获取该位置"按钮到正常状态
+            updateSearchButtonState('normal');
+            
             // 设置按钮状态
             currentLocationBtn.disabled = true;
             currentLocationBtn.textContent = '🔄 定位中...';
@@ -2093,6 +2096,10 @@
                         const recommendCity = !cachedResult.cityMatch;
 
                         if (pois.length > 1) {
+                            // 从缓存加载多个选项，恢复按钮正常状态等待用户选择
+                            const searchBtn = document.getElementById('searchLocationBtn');
+                            searchBtn.disabled = false;
+                            searchBtn.textContent = '📍 获取该位置';
                             renderLocationChoices(pois, recommendCity);
                             // 选择后会在selectLocation中设置按钮状态
                         } else if (pois.length === 1) {
@@ -2164,6 +2171,9 @@
                     } else {
                         // 手动流程：显示选项或直接处理
                         if (poisToProcess.length > 1 || !matchedCity) {
+                            // 搜索成功，先恢复按钮正常状态，等待用户选择
+                            searchBtn.disabled = false;
+                            searchBtn.textContent = '📍 获取该位置';
                             renderLocationChoices(poisToProcess, !matchedCity);
                             // 选择后会在selectLocation中设置按钮状态
                         } else {
