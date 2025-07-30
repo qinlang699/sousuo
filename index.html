@@ -92,6 +92,46 @@
             transition: box-shadow 0.3s ease;
         }
         
+        /* 移动端双列布局样式 */
+        .mobile-dual-layout {
+            display: flex;
+            gap: 15px;
+            align-items: stretch;
+        }
+        
+        .mobile-location-left {
+            flex: 1;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .mobile-location-right {
+            flex: 2;
+            text-align: left;
+        }
+        
+        .mobile-dual-layout .form-group {
+            margin-bottom: 8px;
+        }
+        
+        .mobile-dual-layout .form-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .mobile-dual-layout label {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .mobile-dual-layout button {
+            width: 100%;
+            padding: 12px 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
         .search-form:hover {
             box-shadow: 0 6px 12px rgba(0,0,0,0.12);
         }
@@ -1113,20 +1153,35 @@
         
         
         <div class="search-form">
-            <div class="form-group" id="currentLocationSection">
-                <label>1.获取当前位置的定位:</label>
-                <div style="text-align: center;">
-                    <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
+            <!-- 移动端双列布局容器 -->
+            <div id="mobileLocationContainer" class="mobile-dual-layout" style="display: none;">
+                <div class="mobile-location-left">
+                    <div class="form-group">
+                        <label>1.获取当前定位:</label>
+                        <button id="currentLocationBtn" onclick="getCurrentLocation()">📍 高德定位</button>
+                    </div>
+                </div>
+                <div class="mobile-location-right">
+                    <div class="form-group">
+                        <label for="locationKeyword">2.手动输入位置:</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
+                    </div>
+                    <div class="form-group">
+                        <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 获取该位置</button>
+                    </div>
                 </div>
             </div>
             
-            <hr id="locationSeparator" style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
-            
-            <div class="form-group">
-                <label for="locationKeyword" id="manualLocationLabel">2.手动输入精确位置:</label>
-                <input type="text" id="locationKeyword" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
-                <div style="text-align: center; margin-top: 10px;">
-                    <button onclick="searchLocationByKeyword()" id="searchLocationBtn">📍 获取该位置</button>
+            <!-- 电脑端单列布局容器 -->
+            <div id="desktopLocationContainer" style="display: none;">
+                <div class="form-group">
+                    <label for="locationKeyword" id="manualLocationLabel">1.手动输入位置:</label>
+                    <input type="text" id="locationKeywordDesktop" placeholder="例如：杭州西湖" value="" oninput="onLocationInputChange()">
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button onclick="searchLocationByKeyword()" id="searchLocationBtnDesktop">📍 获取该位置</button>
+                    </div>
                 </div>
             </div>
             <div id="locationStatus" style="margin-top: 15px;"></div>
@@ -1814,7 +1869,7 @@
                         <div class="recommend-text">推荐输入包含城市的地点以精确定位</div>
                     </div>`;
             } else {
-                promptHtml = `<div class="success">请选择以下坐标中的一个:</div>`;
+                promptHtml = `<div class="success">请选择您所在的位置:(由近到远)</div>`;
             }
 
             let choicesHtml = promptHtml;
@@ -1840,8 +1895,12 @@
         function selectLocation(index) {
             const selectedPoi = locationChoices[index];
             
-            // 更新输入框为所选的地名
-            document.getElementById('locationKeyword').value = selectedPoi.name;
+            // 更新两个输入框为所选的地名
+            const mobileInput = document.getElementById('locationKeyword');
+            const desktopInput = document.getElementById('locationKeywordDesktop');
+            
+            if (mobileInput) mobileInput.value = selectedPoi.name;
+            if (desktopInput) desktopInput.value = selectedPoi.name;
 
             // 清理选项
             locationChoices = [];
@@ -1871,27 +1930,47 @@
         
         // 按钮状态管理
         function updateSearchButtonState(state) {
-            const searchBtn = document.getElementById('searchLocationBtn');
+            const mobileBtn = document.getElementById('searchLocationBtn');
+            const desktopBtn = document.getElementById('searchLocationBtnDesktop');
             
-            switch (state) {
-                case 'completed':
-                    searchBtn.textContent = '✅ 已获取位置';
-                    searchBtn.disabled = true;
-                    searchBtn.style.backgroundColor = '#ccc';
-                    searchBtn.style.cursor = 'not-allowed';
-                    break;
-                case 'normal':
-                default:
-                    searchBtn.textContent = '📍 获取该位置';
-                    searchBtn.disabled = false;
-                    searchBtn.style.backgroundColor = '';
-                    searchBtn.style.cursor = 'pointer';
-                    break;
-            }
+            const updateBtn = (btn) => {
+                if (!btn) return;
+                switch (state) {
+                    case 'completed':
+                        btn.textContent = '✅ 已获取位置';
+                        btn.disabled = true;
+                        btn.style.backgroundColor = '#ccc';
+                        btn.style.cursor = 'not-allowed';
+                        break;
+                    case 'normal':
+                    default:
+                        btn.textContent = '📍 获取该位置';
+                        btn.disabled = false;
+                        btn.style.backgroundColor = '';
+                        btn.style.cursor = 'pointer';
+                        break;
+                }
+            };
+            
+            updateBtn(mobileBtn);
+            updateBtn(desktopBtn);
         }
         
         // 输入框变化监听
         function onLocationInputChange() {
+            // 同步输入框内容
+            const mobileInput = document.getElementById('locationKeyword');
+            const desktopInput = document.getElementById('locationKeywordDesktop');
+            
+            // 确定是哪个输入框发生了变化，并同步到另一个
+            if (event && event.target) {
+                if (event.target.id === 'locationKeyword') {
+                    if (desktopInput) desktopInput.value = event.target.value;
+                } else if (event.target.id === 'locationKeywordDesktop') {
+                    if (mobileInput) mobileInput.value = event.target.value;
+                }
+            }
+            
             // 当输入框内容变化时，恢复按钮状态
             updateSearchButtonState('normal');
         }
@@ -2110,15 +2189,33 @@
             }
         }
 
-        async function searchLocationByKeyword(isAutomated = false) {
-            let locationKeyword = document.getElementById('locationKeyword').value.trim();
-            if (!locationKeyword) {
-                locationKeyword = '杭州西湖';
+        // 获取当前激活的输入框值
+        function getCurrentLocationKeyword() {
+            const deviceInfo = detectDeviceType();
+            let locationKeyword = '';
+            
+            if (deviceInfo.isDesktop) {
+                const desktopInput = document.getElementById('locationKeywordDesktop');
+                locationKeyword = desktopInput ? desktopInput.value.trim() : '';
+            } else {
+                const mobileInput = document.getElementById('locationKeyword');
+                locationKeyword = mobileInput ? mobileInput.value.trim() : '';
             }
+            
+            return locationKeyword || '杭州西湖';
+        }
+
+        async function searchLocationByKeyword(isAutomated = false) {
+            let locationKeyword = getCurrentLocationKeyword();
 
             const statusDiv = document.getElementById('locationStatus');
-            const searchBtn = document.getElementById('searchLocationBtn');
             const nearbySection = document.getElementById('nearby-search-section');
+            
+            // 获取当前活跃的按钮
+            const deviceInfo = detectDeviceType();
+            const searchBtn = deviceInfo.isDesktop ? 
+                document.getElementById('searchLocationBtnDesktop') : 
+                document.getElementById('searchLocationBtn');
             
             // 只有当关键字改变时，才清空结果和缓存
             if (locationKeyword !== lastLocationKeyword) {
@@ -2630,43 +2727,48 @@
         // 根据设备类型调整UI
         function adjustUIForDevice() {
             const deviceInfo = detectDeviceType();
-            const currentLocationSection = document.getElementById('currentLocationSection');
-            const locationSeparator = document.getElementById('locationSeparator');
-            const manualLocationLabel = document.getElementById('manualLocationLabel');
+            const mobileContainer = document.getElementById('mobileLocationContainer');
+            const desktopContainer = document.getElementById('desktopLocationContainer');
             const categoryLabel = document.getElementById('categoryLabel');
             
             if (deviceInfo.isDesktop) {
-                // 电脑端：隐藏高德定位相关内容
-                if (currentLocationSection) {
-                    currentLocationSection.style.display = 'none';
+                // 电脑端：显示电脑端布局，隐藏移动端布局
+                if (mobileContainer) {
+                    mobileContainer.style.display = 'none';
                 }
-                if (locationSeparator) {
-                    locationSeparator.style.display = 'none';
-                }
-                // 修改标签为"1.手动输入精确位置:"
-                if (manualLocationLabel) {
-                    manualLocationLabel.textContent = '1.手动输入精确位置:';
+                if (desktopContainer) {
+                    desktopContainer.style.display = 'block';
                 }
                 // 修改分类标签为"2.点击分类按钮或手动输入关键字:"
                 if (categoryLabel) {
                     categoryLabel.textContent = '2.点击分类按钮或手动输入关键字:';
                 }
             } else {
-                // 移动端：显示所有内容
-                if (currentLocationSection) {
-                    currentLocationSection.style.display = 'block';
+                // 移动端：显示移动端双列布局，隐藏电脑端布局
+                if (mobileContainer) {
+                    mobileContainer.style.display = 'flex';
                 }
-                if (locationSeparator) {
-                    locationSeparator.style.display = 'block';
-                }
-                // 保持"2.手动输入精确位置:"
-                if (manualLocationLabel) {
-                    manualLocationLabel.textContent = '2.手动输入精确位置:';
+                if (desktopContainer) {
+                    desktopContainer.style.display = 'none';
                 }
                 // 修改分类标签为"3.点击分类按钮或手动输入关键字:"
                 if (categoryLabel) {
                     categoryLabel.textContent = '3.点击分类按钮或手动输入关键字:';
                 }
+            }
+            
+            // 同步两个输入框的值
+            syncInputFields();
+        }
+        
+        // 同步移动端和电脑端输入框的值
+        function syncInputFields() {
+            const mobileInput = document.getElementById('locationKeyword');
+            const desktopInput = document.getElementById('locationKeywordDesktop');
+            
+            if (mobileInput && desktopInput) {
+                // 以移动端输入框为准，同步到电脑端
+                desktopInput.value = mobileInput.value;
             }
         }
 
