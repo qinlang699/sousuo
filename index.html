@@ -105,7 +105,7 @@
             justify-content: space-evenly;
             margin: 0;
             padding: 0;
-            gap: 25%;
+            gap: 20%;
         }
         
         .mobile-label-left {
@@ -1970,13 +1970,15 @@
                 lastLocationKeyword = selectedPoi.name;
             } else {
                 // 来自手动输入：正常处理并缓存
-            processLocationPoi(selectedPoi, false);
+                // 确保手动选择时重置标志
+                isCurrentLocationSelection = false;
+                processLocationPoi(selectedPoi, false);
                 updateSearchButtonState('completed');
-            // 使用新的、明确的地名作为键来缓存选择
-            locationCache[selectedPoi.name] = { pois: [selectedPoi], cityMatch: true };
-            // 成功选择后，同样更新"上一次的关键字"
-            lastLocationKeyword = selectedPoi.name;
-        }
+                // 使用新的、明确的地名作为键来缓存选择
+                locationCache[selectedPoi.name] = { pois: [selectedPoi], cityMatch: true };
+                // 成功选择后，同样更新"上一次的关键字"
+                lastLocationKeyword = selectedPoi.name;
+            }
         }
 
         /* ===============================================
@@ -2295,6 +2297,8 @@
                             const searchBtn = document.getElementById('searchLocationBtn');
                             searchBtn.disabled = false;
                             searchBtn.textContent = '📍 获取该位置';
+                            // 确保缓存数据时isCurrentLocationSelection为false
+                            isCurrentLocationSelection = false;
                             renderLocationChoices(pois, recommendCity);
                             // 选择后会在selectLocation中设置按钮状态
                         } else if (pois.length === 1) {
@@ -2369,6 +2373,8 @@
                             // 搜索成功，先恢复按钮正常状态，等待用户选择
                             searchBtn.disabled = false;
                             searchBtn.textContent = '📍 获取该位置';
+                            // 确保手动搜索时isCurrentLocationSelection为false
+                            isCurrentLocationSelection = false;
                             renderLocationChoices(poisToProcess, !matchedCity);
                             // 选择后会在selectLocation中设置按钮状态
                         } else {
